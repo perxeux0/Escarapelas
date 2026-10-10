@@ -1,15 +1,15 @@
 /**
  * ============================================================
- *  SERVICIO DE ASISTENCIA — Escarapelas SENA
- *  Centro de Automatización Industrial · Regional Caldas
- *  Instructor: Jorge Walter Salazar A.
+ 
+ *  Instructor: perxeux
  * ============================================================
  *  Backend gratuito con Google Apps Script + Google Sheets.
  *  - El celular escanea el QR del carnet → abre esta URL → se registra la asistencia.
  *  - El panel (GitHub Pages) consulta, filtra, sincroniza y abre/cierra el escaneo.
  *
  *  INSTALACIÓN (resumen; detalle en README.md):
- *   1. Crea una Hoja de cálculo de Google → Extensiones → Apps Script.
+ *   1. Crea una Hoja de cálculo de Google → Extensiones → Apps Script
+ *      (o un proyecto suelto en script.google.com: la hoja de datos se crea sola).
  *   2. Pega este código, CAMBIA la CLAVE_ADMIN de abajo y guarda.
  *   3. Ejecuta la función `instalar` una vez (autoriza los permisos).
  *   4. Implementar → Nueva implementación → Aplicación web
@@ -30,16 +30,44 @@ var CAB_ASIS = ['fecha_hora', 'fecha', 'hora', 'evento_id', 'evento', 'id', 'nom
 
 /* ---------- Instalación ---------- */
 function instalar() {
+  var ss = libro_();
   hoja_(HOJA_PART, CAB_PART);
   hoja_(HOJA_ASIS, CAB_ASIS);
-  var ok = claveValida_();
-  Logger.log(ok ? 'Instalación correcta. Ahora implementa como Aplicación web.'
-                : '⚠️ Instalado, pero DEBES cambiar CLAVE_ADMIN (mínimo 12 caracteres) antes de usarlo.');
+  Logger.log('Base de datos: ' + ss.getUrl());
+  Logger.log(claveValida_() ? 'Instalación correcta. Ahora implementa como Aplicación web.'
+                            : '⚠️ Instalado, pero DEBES cambiar CLAVE_ADMIN (mínimo 12 caracteres) antes de usarlo.');
+}
+
+/* Libro de Google Sheets donde se guardan los datos.
+ * - Si el script se creó desde una hoja (Extensiones → Apps Script), usa esa hoja.
+ * - Si se creó suelto en script.google.com, crea una hoja nueva en tu Drive la primera vez
+ *   y guarda su ID en las propiedades del script para reutilizarla siempre. */
+var _libro = null;
+function libro_() {
+  if (_libro) return _libro;
+  var activo = null;
+  try { activo = SpreadsheetApp.getActiveSpreadsheet(); } catch (e) { activo = null; }
+  if (activo) return (_libro = activo);
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('SHEET_ID');
+  if (id) {
+    try { return (_libro = SpreadsheetApp.openById(id)); }
+    catch (e) { throw new Error('No se pudo abrir la hoja de datos (¿la borraste?). Ejecuta “reiniciarBaseDeDatos” para crear una nueva.'); }
+  }
+  _libro = SpreadsheetApp.create('Asistencia Escarapelas SENA');
+  props.setProperty('SHEET_ID', _libro.getId());
+  return _libro;
+}
+
+/* Solo si borraste la hoja de datos: crea una nueva en la próxima ejecución */
+function reiniciarBaseDeDatos() {
+  PropertiesService.getScriptProperties().deleteProperty('SHEET_ID');
+  _libro = null;
+  instalar();
 }
 
 function hoja_(nombre, cabecera) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error('Este script debe crearse desde una Hoja de cálculo (Extensiones → Apps Script).');
+  var ss = libro_();
   var sh = ss.getSheetByName(nombre);
   if (!sh) {
     sh = ss.insertSheet(nombre);
@@ -47,6 +75,9 @@ function hoja_(nombre, cabecera) {
     sh.setFrozenRows(1);
     // Todo como texto: evita que Sheets convierta fechas, códigos o nombres
     sh.getRange(1, 1, sh.getMaxRows(), cabecera.length).setNumberFormat('@');
+    // La hoja vacía que trae un libro nuevo ("Hoja 1" / "Sheet1") ya no hace falta
+    var extra = ss.getSheets().filter(function (x) { return x.getName() !== HOJA_PART && x.getName() !== HOJA_ASIS && x.getLastRow() === 0; });
+    if (extra.length && ss.getSheets().length > extra.length) extra.forEach(function (x) { ss.deleteSheet(x); });
   }
   return sh;
 }
