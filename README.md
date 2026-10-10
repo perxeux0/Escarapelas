@@ -1,6 +1,6 @@
-# Escarapelas SENA · Centro de Automatización Industrial
+# Escarapelas
 
-Generador profesional de escarapelas para los bootcamps y eventos del **SENA – Centro de Automatización Industrial, Regional Caldas**.
+Generador profesional de escarapelas para eventos 
 
 **Instructor:** Jorge Walter Salazar A.
 
@@ -10,7 +10,7 @@ Generador profesional de escarapelas para los bootcamps y eventos del **SENA –
 
 | Función | Detalle |
 |---|---|
-| Acceso con usuarios | Administrador inicial **Walter / 123456** (obliga a cambiarla al primer ingreso). El administrador crea administradores o usuarios normales y les asigna contraseña. |
+| Acceso con usuarios | Administrador inicial (obliga a cambiarla al primer ingreso). El administrador crea administradores o usuarios normales y les asigna contraseña. |
 | Encabezado editable | Dos campos con sugerencia (no texto fijo): *Centro de Automatización Industrial* y *Regional Caldas*. |
 | Logo del evento | Se carga desde el panel y se ubica a la izquierda, centro o derecha, con tamaño ajustable. |
 | Título del evento | Tres líneas: texto mediano (*Bootcamp*), principal (*de Ciberseguridad*) y frase motivadora. |
