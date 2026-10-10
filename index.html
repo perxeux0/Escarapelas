@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Escarapelas SENA · Centro de Automatización Industrial</title>
+  <title>Escarapelas SENA v4 · Centro de Automatización Industrial</title>
   <meta name="description" content="Generador profesional de escarapelas para eventos y bootcamps del SENA – Centro de Automatización Industrial, Regional Caldas.">
+  <!-- Política de seguridad de contenido: solo se ejecutan los scripts propios del sitio -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://script.google.com https://script.googleusercontent.com; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta name="referrer" content="no-referrer">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
@@ -33,8 +36,14 @@
         <input id="loginPass" type="password" autocomplete="current-password" required>
       </label>
       <p id="loginError" class="form-error" role="alert"></p>
-      <button class="btn btn-primary btn-block" type="submit">Ingresar</button>
+      <button class="btn btn-primary btn-block" type="submit" id="btnLogin">Ingresar</button>
     </form>
+    <details class="server-cfg" id="serverCfg">
+      <summary>⚙ Servidor <span id="serverState"></span></summary>
+      <p class="hint">Pega la URL de la Aplicación web de Apps Script (termina en <code>/exec</code>). Para que todos los equipos la usen sin configurarla, pégala en <code>js/config.js</code> del repositorio.</p>
+      <input type="text" id="serverUrl" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false" autocomplete="off">
+      <div class="row-end"><button class="btn btn-sm btn-primary" type="button" id="btnServerSave">Guardar y probar</button></div>
+    </details>
     <p class="login-foot">Acceso restringido a personal autorizado.</p>
     <p class="credit">Instructor: <strong>Jorge Walter Salazar A.</strong></p>
   </div>
@@ -64,10 +73,45 @@
     <!-- ======= PANEL DE CONTROL ======= -->
     <aside class="editor" id="editor">
 
+      <div class="project-bar">
+        <div class="project-info">
+          <span class="lbl">Proyecto</span>
+          <strong id="projName">Nuevo proyecto (sin guardar)</strong>
+          <span id="projState" class="proj-state"></span>
+        </div>
+        <div class="project-actions">
+          <button class="btn btn-primary btn-sm" id="btnSave" title="Guardar en el servidor (Ctrl + S)">💾 Guardar</button>
+          <button class="btn btn-sm" id="btnSaveAs">Guardar como…</button>
+          <button class="btn btn-sm" id="btnProjects">📁 Proyectos</button>
+          <button class="btn btn-sm btn-ghost" id="btnNewProject">＋ Nuevo</button>
+        </div>
+      </div>
+
       <details class="card" open>
         <summary><span class="step">1</span> Encabezado institucional y logo</summary>
         <div class="card-body">
           <div id="fields-inst"></div>
+          <div class="upload-row">
+            <div class="upload" data-img="logo2">
+              <span class="upload-label">Logo SENA (superior)</span>
+              <div class="upload-thumb" id="thumb-logo2"><span>Aquí se agrega el logo SENA</span></div>
+              <div class="upload-actions">
+                <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-upload="logo2" hidden></label>
+                <button class="btn btn-sm btn-ghost" data-clear="logo2">Quitar</button>
+              </div>
+            </div>
+            <div class="stack">
+              <label class="lbl">Ubicación del logo SENA en la escarapela</label>
+              <div class="segmented" id="logo2Pos">
+                <button data-v="left">◧ Izquierda</button>
+                <button data-v="center">◫ Centro</button>
+                <button data-v="right">◨ Derecha</button>
+              </div>
+              <label class="lbl">Tamaño del logo SENA <output id="logo2SizeOut"></output></label>
+              <input type="range" id="logo2Size" min="6" max="40" step="0.5">
+              <p class="hint">Va en la parte superior, encima del encabezado y del logo del evento.</p>
+            </div>
+          </div>
           <div class="upload-row">
             <div class="upload" data-img="logo">
               <span class="upload-label">Logo del evento</span>
@@ -167,6 +211,10 @@
                 <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-upload="foot0" hidden></label>
                 <button class="btn btn-sm btn-ghost" data-clear="foot0">✕</button>
               </div>
+              <div class="size-row">
+                <label class="lbl">Tamaño <output id="footScaleOut0"></output></label>
+                <input type="range" min="20" max="100" step="5" data-footscale="0">
+              </div>
             </div>
             <div class="upload" data-img="foot1">
               <span class="upload-label">Centro</span>
@@ -174,6 +222,10 @@
               <div class="upload-actions">
                 <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-upload="foot1" hidden></label>
                 <button class="btn btn-sm btn-ghost" data-clear="foot1">✕</button>
+              </div>
+              <div class="size-row">
+                <label class="lbl">Tamaño <output id="footScaleOut1"></output></label>
+                <input type="range" min="20" max="100" step="5" data-footscale="1">
               </div>
             </div>
             <div class="upload" data-img="foot2">
@@ -183,9 +235,13 @@
                 <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-upload="foot2" hidden></label>
                 <button class="btn btn-sm btn-ghost" data-clear="foot2">✕</button>
               </div>
+              <div class="size-row">
+                <label class="lbl">Tamaño <output id="footScaleOut2"></output></label>
+                <input type="range" min="20" max="100" step="5" data-footscale="2">
+              </div>
             </div>
           </div>
-          <label class="lbl">Altura de la franja inferior <output id="footSizeOut"></output></label>
+          <label class="lbl">Altura de la franja inferior (espacio disponible) <output id="footSizeOut"></output></label>
           <input type="range" id="footSize" min="8" max="30" step="1">
         </div>
       </details>
@@ -286,12 +342,26 @@
         <div class="card-body">
           <p class="hint">Cada participante recibe un carnet (85,6 × 54 mm, tamaño tarjeta) con los datos del evento y un código QR personal. Al escanearlo con el celular se registra su asistencia con fecha y hora.</p>
           <div id="fields-card"></div>
+          <div class="grid-2">
+            <div>
+              <label class="lbl">Logo SENA en el carnet</label>
+              <div class="segmented" id="cardLogo2Pos">
+                <button data-v="left">◧ Izq.</button>
+                <button data-v="center">◫ Centro</button>
+                <button data-v="right">◨ Der.</button>
+              </div>
+            </div>
+            <div>
+              <label class="lbl">Tamaño en el carnet <output id="cardLogo2SizeOut"></output></label>
+              <input type="range" id="cardLogo2Size" min="3" max="14" step="0.5">
+            </div>
+          </div>
+          <p class="hint">El logo SENA se carga en la sección 1 y se usa en la escarapela y en el carnet.</p>
           <div class="event-code">
             <div>
-              <span class="lbl">Código del evento</span>
+              <span class="lbl">Código del proyecto (va en cada QR)</span>
               <code id="eventCode">—</code>
             </div>
-            <button class="btn btn-sm btn-ghost" id="btnNewEvent" title="Crea un evento nuevo: los carnets anteriores dejan de corresponder a este">↻ Nuevo código</button>
           </div>
           <p class="hint" id="serviceState"></p>
           <button class="btn btn-sm btn-primary" id="btnOpenAtt">📋 Abrir control de asistencia</button>
@@ -377,7 +447,7 @@
     <div class="modal-body">
       <form id="newUserForm" class="new-user">
         <input id="nuName" placeholder="Usuario" required autocomplete="off">
-        <input id="nuPass" type="password" placeholder="Contraseña (mín. 6)" required autocomplete="new-password">
+        <input id="nuPass" type="password" placeholder="Contraseña (mín. 8, letras y números)" required autocomplete="new-password">
         <select id="nuRole"><option value="user">Usuario normal</option><option value="admin">Administrador</option></select>
         <button class="btn btn-primary btn-sm" type="submit">Crear</button>
       </form>
@@ -386,11 +456,7 @@
         <thead><tr><th>Usuario</th><th>Rol</th><th>Creado</th><th></th></tr></thead>
         <tbody id="usersBody"></tbody>
       </table>
-      <p class="hint">Los usuarios se guardan en este navegador. Usa “Exportar usuarios” para llevarlos a otro equipo.</p>
-      <div class="btn-row">
-        <button class="btn btn-sm" id="btnExportUsers">⬇ Exportar usuarios</button>
-        <label class="btn btn-sm">⬆ Importar usuarios<input type="file" id="importUsers" accept=".json" hidden></label>
-      </div>
+      <p class="hint">Los usuarios se guardan en el servidor: sirven en cualquier computador. Los usuarios normales pueden crear, cargar y guardar proyectos y ver la asistencia; solo los administradores pueden eliminar.</p>
     </div>
   </div>
 </div>
@@ -405,8 +471,8 @@
     <form class="modal-body" id="passForm">
       <p class="hint" id="passMsg"></p>
       <label class="lbl">Contraseña actual<input type="password" id="pwOld" required autocomplete="current-password"></label>
-      <label class="lbl">Nueva contraseña<input type="password" id="pwNew" required minlength="6" autocomplete="new-password"></label>
-      <label class="lbl">Confirmar nueva contraseña<input type="password" id="pwNew2" required minlength="6" autocomplete="new-password"></label>
+      <label class="lbl">Nueva contraseña<input type="password" id="pwNew" required minlength="8" autocomplete="new-password"></label>
+      <label class="lbl">Confirmar nueva contraseña<input type="password" id="pwNew2" required minlength="8" autocomplete="new-password"></label>
       <p class="form-error" id="pwError"></p>
       <button class="btn btn-primary btn-block" type="submit">Guardar</button>
     </form>
@@ -421,7 +487,7 @@
       <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
     </header>
     <div class="modal-body">
-      <p class="hint">Carga una o dos imágenes. Con dos, se alternan cada 8 segundos con una transición suave. Se ven en el inicio de sesión y detrás del panel.</p>
+      <p class="hint">Carga una o dos imágenes. Con dos, se alternan cada 8 segundos con una transición suave. Se guardan en el servidor y las ven todos los usuarios, en el inicio de sesión y detrás del panel.</p>
       <div class="foot-uploads two">
         <div class="upload">
           <span class="upload-label">Imagen 1</span>
@@ -457,27 +523,16 @@
       <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
     </header>
     <div class="att-toolbar">
+      <label class="lbl inline att-project">Proyecto
+        <select id="attProject"><option value="">Cargando…</option></select>
+      </label>
       <span class="scan-pill" id="scanPill">—</span>
       <button class="btn" id="btnScanToggle" disabled>Habilitar escaneo</button>
-      <button class="btn" id="btnSync" title="Envía la lista de participantes al servicio para que sus QR sean válidos">⇅ Sincronizar participantes</button>
       <button class="btn" id="btnAttRefresh">↻ Actualizar</button>
-      <label class="check inline"><input type="checkbox" id="attAuto" checked> Actualizar cada 20 s</label>
+      <label class="check inline"><input type="checkbox" id="attAuto" checked> Cada 20 s</label>
       <span class="spacer"></span>
+      <button class="btn btn-ghost" id="btnAttOpenProject" title="Abrir este proyecto en el editor">✎ Abrir en el editor</button>
       <button class="btn btn-primary" id="btnAttExcel">⬇ Exportar a Excel</button>
-      <button class="btn btn-ghost" id="btnAttCfg">⚙ Configuración</button>
-    </div>
-    <div class="att-cfg" id="attCfg" hidden>
-      <div class="grid-2">
-        <label class="lbl">URL de la aplicación web (Apps Script)
-          <input type="text" id="attUrl" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false" autocomplete="off">
-        </label>
-        <label class="lbl">Clave de administrador (CLAVE_ADMIN)
-          <input type="password" id="attKey" placeholder="Mínimo 12 caracteres" autocomplete="off">
-        </label>
-      </div>
-      <label class="check"><input type="checkbox" id="attKeyShow"> Mostrar clave</label>
-      <p class="hint warn" id="attCfgNote"></p>
-      <div class="row-end"><button class="btn btn-primary btn-sm" id="btnAttSave">Guardar y probar conexión</button></div>
     </div>
     <div class="modal-body att-body">
       <div class="att-stats" id="attStats"></div>
@@ -497,6 +552,59 @@
   </div>
 </div>
 
+<!-- ============ MODAL: PROYECTOS ============ -->
+<div class="modal" id="projModal" hidden>
+  <div class="modal-box xl">
+    <header class="modal-head">
+      <div>
+        <h3>Proyectos guardados</h3>
+        <p class="hint" style="margin:2px 0 0">Compartidos por todos los usuarios. Cualquiera puede cargarlos y ver su asistencia; solo los administradores pueden eliminarlos.</p>
+      </div>
+      <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
+    </header>
+    <div class="att-toolbar">
+      <input type="text" id="projSearch" class="proj-search" placeholder="Buscar por nombre, autor o código…">
+      <button class="btn" id="btnProjRefresh">↻ Actualizar</button>
+      <button class="btn btn-primary" id="btnProjNew">＋ Nuevo proyecto</button>
+      <span class="spacer"></span>
+      <div class="admin-tools" id="projAdmin" hidden>
+        <span class="admin-tag">Administrador</span>
+        <button class="btn" id="btnBackup">⬇ Backup completo</button>
+        <label class="btn">⬆ Restaurar backup<input type="file" id="restoreFile" accept=".json,application/json" hidden></label>
+        <button class="btn btn-danger" id="btnDeleteAll">🗑 Borrar todo</button>
+      </div>
+    </div>
+    <div class="progress" id="projProgress" hidden>
+      <div class="progress-bar"><div class="progress-fill" id="projProgressFill"></div></div>
+      <span id="projProgressLabel"></span>
+    </div>
+    <div class="modal-body att-body">
+      <div class="att-table-wrap" id="projList"></div>
+    </div>
+    <footer class="modal-foot"><p class="att-status" id="projStatus"></p></footer>
+  </div>
+</div>
+
+<!-- ============ DIÁLOGO DE CONFIRMACIÓN / TEXTO ============ -->
+<div class="modal ask-layer" id="askModal" hidden>
+  <div class="modal-box sm">
+    <header class="modal-head">
+      <h3 id="askTitle"></h3>
+    </header>
+    <form class="modal-body" id="askForm">
+      <p id="askMsg" class="ask-msg"></p>
+      <label class="lbl" id="askLabel" hidden><span id="askLabelText"></span>
+        <input type="text" id="askInput" autocomplete="off" spellcheck="false">
+      </label>
+      <p class="form-error" id="askError"></p>
+      <div class="row-end">
+        <button class="btn btn-ghost" type="button" id="askCancel">Cancelar</button>
+        <button class="btn btn-primary" type="submit" id="askOk">Aceptar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="toasts" class="toasts" aria-live="polite"></div>
 <div id="printRoot"></div>
 <div id="offscreen" aria-hidden="true"></div>
@@ -504,12 +612,14 @@
 <script src="js/vendor/html2canvas.min.js" defer></script>
 <script src="js/vendor/jszip.min.js" defer></script>
 <script src="js/vendor/xlsx.full.min.js" defer></script>
-<script src="js/sha256.js" defer></script>
+<script src="js/config.js" defer></script>
+<script src="js/api.js" defer></script>
 <script src="js/auth.js" defer></script>
 <script src="js/vendor/qrcode.js" defer></script>
 <script src="js/badge.js" defer></script>
 <script src="js/carnet.js" defer></script>
 <script src="js/attendance.js" defer></script>
+<script src="js/projects.js" defer></script>
 <script src="js/app.js" defer></script>
 </body>
 </html>

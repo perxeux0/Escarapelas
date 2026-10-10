@@ -9,5 +9,5 @@
  */
 window.APP_CONFIG = {
   serviceUrl: 'https://script.google.com/macros/s/AKfycbwnc_5Dcu5eRps7kpgLe2ibkh8uGV3gCgrnBfKfQhZTQbccD3YBjTS43IQ_5Awbl7AHOA/exec',
-  version: '4.0'
+  version: '4.1'
 };

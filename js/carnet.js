@@ -76,6 +76,8 @@
     h += B.isImg(d.bg) ? '<div class="c-bg" style="background-image:url(\'' + d.bg + '\')"></div>' : '';
     h += '<div class="c-tint"></div><div class="c-band"></div>';
     h += '<div class="c-body"><div class="c-left">';
+    if (B.isImg(d.logo2)) h += '<div class="c-logo2 pos-' + d.cardLogo2Pos + '" style="height:' + d.cardLogo2Size + 'mm"><img src="' + d.logo2 + '" alt=""></div>';
+    else if (mode === 'edit') h += '<div class="c-logo2 pos-' + d.cardLogo2Pos + '" style="height:' + d.cardLogo2Size + 'mm"><div class="c-logo2-ph">Logo SENA</div></div>';
     h += '<div class="c-head">' + (B.isImg(d.logo) ? '<img class="c-logo" src="' + d.logo + '" alt="">' : '') +
       '<div class="c-headtxt">' + txt('c-h1', T.h1, ph.h1, S.h1, 5.6, mode) + txt('c-h2', T.h2, ph.h2, S.h2, 4.6, mode) + '</div></div>';
     h += '<div class="c-event">' + txt('c-t1', T.t1, ph.t1, S.t1, 5.6, mode) + txt('c-t2', T.t2, ph.t2, S.t2, 9.5, mode) + '</div>';

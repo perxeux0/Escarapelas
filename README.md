@@ -1,191 +1,143 @@
-# Escarapelas
+# Escarapelas y Asistencia SENA · Versión 4.1
 
-Generador profesional de escarapelas para eventos 
+Generador de escarapelas y carnets con control de asistencia por QR para los bootcamps y eventos del **SENA – Centro de Automatización Industrial, Regional Caldas**.
 
 **Instructor:** Jorge Walter Salazar A.
 
 ---
 
-## Qué hace
+## Novedades de la versión 4
 
-| Función | Detalle |
+| Mejora | Detalle |
 |---|---|
-| Acceso con usuarios | Administrador inicial (obliga a cambiarla al primer ingreso). El administrador crea administradores o usuarios normales y les asigna contraseña. |
-| Encabezado editable | Dos campos con sugerencia (no texto fijo): *Centro de Automatización Industrial* y *Regional Caldas*. |
-| Logo del evento | Se carga desde el panel y se ubica a la izquierda, centro o derecha, con tamaño ajustable. |
-| Título del evento | Tres líneas: texto mediano (*Bootcamp*), principal (*de Ciberseguridad*) y frase motivadora. |
-| Tipografía por campo | Cada campo tiene lista de 20 tipos de letra, tamaño (6–72 pt), negrita, cursiva y mayúsculas. |
-| Colores inteligentes | Eliges un color y la app genera 5 paletas armónicas (monocromática, análoga, complementaria, triádica, complementaria dividida), con control automático de contraste para que el texto siempre se lea. Estilo oscuro o claro y patrones decorativos. |
-| Fondo | Imagen de fondo detrás de todo, con control de intensidad del color encima. |
-| Imágenes inferiores | Tres espacios: izquierda, centro y derecha. |
-| Participantes | Cantidad de escarapelas, nombres uno a uno, pegados separados por coma o **importados desde Excel** (.xlsx, .xls, .ods, .csv) con detección automática de columnas *Nombres / Apellidos / Rol*. |
-| Rango | General (Aprendiz, Participante, Instructor, Coordinador o el que escribas) o individual por persona. |
-| Vista previa en vivo | Cada cambio se ve al instante a la derecha. Nombres largos se ajustan solos para no salirse del recuadro. |
-| Impresión | **4 escarapelas por hoja** (2 × 2) en Carta, Legal u Oficio, con vista previa de todas las hojas y guías de corte. |
-| Formato digital | PNG a 300 ppp de la escarapela actual o ZIP con todas. |
-| Plantillas | Exportar / importar el diseño completo de cada evento en un archivo `.json`. |
-| Fondo del panel | El administrador carga 1 o 2 imágenes de fondo para el panel (con dos, se alternan). |
-| **Carnet de asistencia** | Carnet tamaño tarjeta (8,56 × 5,4 cm) por participante con datos del evento (título, fecha, lugar), nombre, rango y **código QR personal**. |
-| **Asistencia por QR** | Al escanear el QR con la cámara de cualquier celular se registra la asistencia con fecha y hora (una vez por día). Base de datos en Google Sheets. |
-| **Control de asistencia** | Desde el panel: habilitar / inhabilitar el escaneo con un botón, consultar, filtrar por participante, día y rango, y **exportar a Excel**. |
-| **Modos de impresión** | Solo escarapelas (4 por hoja), solo carnets (8 por hoja carta, 10 oficio, 12 legal) o escarapela + carnet de cada persona (2 personas por hoja). |
+| **Proyectos con nombre** | Cada evento se guarda como proyecto (diseño de escarapelas y carnets + participantes). Al guardar por primera vez se pide el nombre. Se listan en **📁 Proyectos** y se cargan con un clic. |
+| **Compartidos entre usuarios y computadores** | Usuarios, proyectos y asistencia viven en el servidor (Google Apps Script + Sheets + Drive). Lo que guarda un usuario lo ven y cargan todos los demás, desde cualquier equipo. |
+| **QR permanentes** | Los QR de los carnets registran asistencia indefinidamente mientras el proyecto exista y su escaneo esté **habilitado**. |
+| **Asistencia de cualquier proyecto** | En **📋 Asistencia** se elige cualquier proyecto de la lista y se ve, filtra y exporta a Excel su asistencia. |
+| **Solo el administrador borra** | Eliminar un proyecto (con sus escarapelas, carnets, participantes y asistencia) o **borrar todo** es exclusivo de los administradores. El servidor lo verifica en cada petición. |
+| **Backup y restauración** | El administrador descarga un backup completo (usuarios, proyectos con imágenes, participantes, asistencia y ajustes) y puede restaurarlo: primero se limpia todo y luego se carga y **verifica** el backup completo. |
+| **Logo SENA** | Segundo logo en la parte superior (“Aquí se agrega el logo SENA”), con posición izquierda/centro/derecha y barra de tamaño, independiente para la escarapela y para el carnet. |
+| **Imágenes inferiores ajustables** | Cada imagen inferior tiene su propia barra de tamaño, además de la altura de la franja. |
+| **Control de cambios** | Indicador “● Cambios sin guardar”, **Ctrl + S** para guardar, aviso si otro usuario modificó el proyecto mientras lo editabas y borrador local por si se cierra el navegador. |
 
-### Tamaño exacto
+### Permisos
 
-La escarapela se dibuja en milímetros reales. Por defecto mide **10 × 13 cm**. Solo un administrador puede cambiarla (sección 7). El máximo permitido para que quepan 4 por hoja carta con márgenes de impresora es **10,19 × 13,37 cm**; la app rechaza medidas mayores.
+| Acción | Usuario | Administrador |
+|---|:---:|:---:|
+| Crear, cargar y guardar proyectos; “Guardar como” | ✅ | ✅ |
+| Ver y exportar la asistencia de cualquier proyecto | ✅ | ✅ |
+| Habilitar / inhabilitar el escaneo de QR | ✅ | ✅ |
+| Imprimir escarapelas y carnets, PNG/ZIP | ✅ | ✅ |
+| Cambiar el tamaño de la escarapela | — | ✅ |
+| Crear usuarios, asignar contraseñas y roles | — | ✅ |
+| Eliminar proyectos / borrar todo | — | ✅ |
+| Backup y restauración | — | ✅ |
+| Fondo del panel | — | ✅ |
 
 ---
 
-## Estructura del proyecto
+## Estructura
 
 ```
-escarapelas-sena/
-├── index.html          ← página principal (login + panel)
-├── .nojekyll           ← le indica a GitHub Pages que publique tal cual
-├── README.md
-├── css/styles.css      ← estilos de la app, de la escarapela (mm/pt) y de impresión
+├── index.html            ← página (ingreso + panel)
+├── .nojekyll
+├── css/styles.css
 ├── js/
-│   ├── sha256.js       ← cifrado de contraseñas (funciona incluso sin https)
-│   ├── auth.js         ← usuarios, sesiones, bloqueo por intentos fallidos
-│   ├── badge.js        ← colores, paletas, tipografías y dibujo de la escarapela
-│   ├── app.js          ← panel de control, Excel, vista previa, impresión, PNG/ZIP
-│   ├── carnet.js       ← diseño del carnet y generación del código QR
-│   ├── attendance.js   ← módulo de control de asistencia (consulta, filtros, Excel)
-│   └── vendor/         ← librerías incluidas (no dependen de internet)
-│       ├── xlsx.full.min.js     (SheetJS – lectura de Excel)
-│       ├── html2canvas.min.js   (exportar PNG)
-│       ├── jszip.min.js         (exportar ZIP)
-│       └── qrcode.js            (generar códigos QR)
-├── gas/
-│   └── Code.gs         ← servicio de asistencia (se pega en Google Apps Script)
-└── docs/referencia.png ← imagen de referencia del diseño
+│   ├── config.js         ← ⚠️ aquí va la URL del servidor (una sola vez)
+│   ├── api.js            ← comunicación con el servidor
+│   ├── auth.js           ← ingreso y usuarios (en el servidor)
+│   ├── projects.js       ← proyectos, eliminar, borrar todo, backup y restauración
+│   ├── attendance.js     ← panel de asistencia
+│   ├── badge.js          ← diseño de la escarapela
+│   ├── carnet.js         ← diseño del carnet y QR
+│   ├── app.js            ← editor, vista previa e impresión
+│   └── vendor/           ← librerías incluidas (Excel, PNG, ZIP, QR)
+├── gas/Code.gs           ← servidor (se pega en Google Apps Script)
+└── docs/referencia.png
 ```
-
-Las escarapelas no requieren servidor. El **registro de asistencia** sí necesita una base de datos compartida (el celular que escanea y el panel deben ver los mismos datos): para eso se usa Google Apps Script + Google Sheets, gratis y sin servidor propio (ver siguiente sección).
 
 ---
 
-## Subir a GitHub y publicarla (paso a paso)
+## Actualizar de la versión 3 a la 4 (paso a paso)
 
-### Opción A — Solo con el navegador (recomendada, sin instalar nada)
+### 1. Servidor (Apps Script)
 
-1. **Crea una cuenta** en <https://github.com> (si no la tienes) y entra.
-2. Arriba a la derecha pulsa **+ → New repository**.
-   - *Repository name:* `escarapelas-sena`
-   - Marca **Public** (GitHub Pages gratis requiere repositorio público).
-   - **No** marques “Add a README” (ya viene uno).
-   - Pulsa **Create repository**.
-3. En la página del repositorio vacío pulsa el enlace **uploading an existing file**.
-4. Descomprime el ZIP del proyecto en tu computador. Abre la carpeta `escarapelas-sena` y **arrastra todo su contenido** (las carpetas `css`, `js`, `docs` y los archivos `index.html`, `README.md`, `.nojekyll`) a la ventana de GitHub.
-   - Importante: arrastra el *contenido*, no la carpeta contenedora; `index.html` debe quedar en la raíz.
-   - El archivo `.nojekyll` está oculto en Windows/Mac. Si no lo ves, no pasa nada: la app funciona sin él. (En Windows: Explorador → Vista → Mostrar → Elementos ocultos.)
-5. Abajo escribe un mensaje como `Primera versión` y pulsa **Commit changes**.
-6. Ve a **Settings → Pages** (menú izquierdo).
-   - *Source:* **Deploy from a branch**
-   - *Branch:* **main** y carpeta **/ (root)** → **Save**.
-7. Espera 1–2 minutos y recarga. Aparecerá: *Your site is live at* `https://TU-USUARIO.github.io/escarapelas-sena/`
-8. Abre ese enlace desde cualquier computador o celular, entra con **Walter / 123456** y define tu nueva contraseña.
+1. Abre tu proyecto de Apps Script.
+2. Reemplaza **todo** el contenido de `Código.gs` por el nuevo `gas/Code.gs` y guarda. **Ya no hay `CLAVE_ADMIN`**: la seguridad ahora son los usuarios y contraseñas.
+3. Elige la función **instalar** → **▶ Ejecutar**. Google pedirá permisos de nuevo, porque v4 usa **Google Drive** para guardar los diseños: *Revisar permisos → tu cuenta → Configuración avanzada → Ir a (proyecto) → Permitir*.
+4. En el registro aparecerán la hoja de datos y la carpeta **“Escarapelas SENA - Proyectos (no borrar)”** en tu Drive.
+5. **Implementar → Administrar implementaciones → ✏ (editar) → Versión: Nueva versión → Implementar**. Así la URL `/exec` no cambia y los carnets ya impresos siguen funcionando.
 
-### Opción B — Con Git desde la terminal
+Si es tu primera instalación: crea una hoja de Google o un proyecto en script.google.com, pega el código, ejecuta **instalar** y haz **Implementar → Nueva implementación → Aplicación web** (*Ejecutar como: Yo* · *Quién tiene acceso: Cualquier usuario*).
 
-```bash
-# 1. Entra a la carpeta del proyecto
-cd escarapelas-sena
+> El usuario inicial del servidor es **Walter / 123456**; al entrar pide cambiar la contraseña. Los usuarios de v3 vivían en cada navegador y no se trasladan: créalos de nuevo en **👥 Usuarios**. Los eventos que ya tenían participantes en v3 aparecen como proyectos “(v3 …)”, con sus participantes, su asistencia y sus QR funcionando.
 
-# 2. Inicializa el repositorio y haz el primer commit
-git init
-git add .
-git commit -m "Primera versión: generador de escarapelas SENA"
-git branch -M main
+### 2. Página (GitHub)
 
-# 3. Conecta con el repositorio creado en GitHub (paso 2 de la opción A)
-git remote add origin https://github.com/TU-USUARIO/escarapelas-sena.git
-git push -u origin main
-```
-
-GitHub pedirá autenticación: usa un **Personal Access Token** (Settings → Developer settings → Personal access tokens → *Fine-grained*, permiso *Contents: Read and write* sobre ese repositorio) en lugar de tu contraseña, o instala **GitHub Desktop** / **GitHub CLI** (`gh auth login`). Luego activa Pages igual que en el paso 6.
-
-### Actualizar la aplicación más adelante
-
-- **Navegador:** entra al repositorio → abre el archivo → ícono de lápiz para editar, o **Add file → Upload files** para reemplazar archivos → **Commit changes**.
-- **Terminal:** `git add . && git commit -m "Descripción del cambio" && git push`.
-
-GitHub Pages se actualiza solo en 1–2 minutos. Si no ves el cambio, recarga con **Ctrl + F5**.
+1. Abre `js/config.js` y pega la URL de tu aplicación web:
+   ```js
+   window.APP_CONFIG = {
+     serviceUrl: 'https://script.google.com/macros/s/TU-ID/exec',
+     version: '4.0'
+   };
+   ```
+   Así todos los computadores se conectan solos. Si la dejas vacía, la pantalla de ingreso pide la URL en **⚙ Servidor** y la recuerda solo en ese navegador. La URL no es secreta: va impresa en cada QR.
+2. Copia los archivos nuevos dentro de tu carpeta del repositorio, reemplazando los anteriores. **No reemplaces la carpeta completa**, porque se borra la carpeta oculta `.git`. Borra `js/sha256.js`, que ya no se usa.
+3. Sube los cambios:
+   ```bash
+   git pull
+   git add -A
+   git commit -m "Versión 4: proyectos compartidos, backups y logo SENA"
+   git push
+   ```
+   `git add -A` también registra los archivos borrados, como `sha256.js`.
+4. Espera 1–2 minutos y abre la página con **Ctrl + F5**.
 
 ---
 
-## Servicio de asistencia (Google Apps Script) — paso a paso
-
-Hazlo una sola vez. Se recomienda una cuenta **Gmail personal o institucional que permita compartir con “Cualquier usuario”** (algunas cuentas de dominio como @sena.edu.co bloquean esa opción; si no aparece, usa un Gmail).
-
-1. Entra a <https://sheets.google.com> y crea una hoja nueva. Llámala, por ejemplo, **Asistencia Escarapelas SENA**.
-2. En la hoja: **Extensiones → Apps Script**.
-3. Borra el contenido de `Código.gs` y **pega todo el archivo `gas/Code.gs`** del proyecto.
-4. En la línea `var CLAVE_ADMIN = 'CAMBIA-ESTA-CLAVE';` escribe una clave secreta **de 12 o más caracteres** (ej. `Bootcamp-CAI-2026*xq`). Guarda (💾).
-5. Arriba elige la función **instalar** y pulsa **▶ Ejecutar**. Google pedirá permisos: *Revisar permisos → tu cuenta → Configuración avanzada → Ir a (proyecto) → Permitir*. Se crean las pestañas **Participantes** y **Asistencia**.
-6. **Implementar → Nueva implementación** → ⚙ tipo **Aplicación web**:
-   - *Ejecutar como:* **Yo**
-   - *Quién tiene acceso:* **Cualquier usuario** (necesario para que el celular registre sin iniciar sesión)
-   - **Implementar** y copia la **URL de la aplicación web** (termina en `/exec`).
-7. En el panel: **📋 Asistencia → ⚙ Configuración** → pega la URL y la misma clave → **Guardar y probar conexión**.
-
-> Si cambias el código de Apps Script más adelante: **Implementar → Administrar implementaciones → ✏ → Versión: Nueva versión → Implementar**. Así la URL no cambia y los carnets ya impresos siguen funcionando.
+## Uso
 
 ### Flujo de un evento
+1. **＋ Nuevo** → diseña la escarapela y el carnet → carga los participantes (uno a uno, separados por coma o desde Excel).
+2. **💾 Guardar** → escribe el nombre del proyecto (ej. “Bootcamp Ciberseguridad – Octubre 2026”).
+3. Imprime: solo escarapelas, solo carnets o ambos. Si hay cambios sin guardar, la app pide guardar antes de imprimir carnets, para que todos los QR queden registrados.
+4. **📋 Asistencia** → elige el proyecto → **▶ Habilitar escaneo** durante la jornada → **⏸ Inhabilitar** al terminar.
+5. Consulta, filtra y **⬇ Exportar a Excel** cuando quieras, desde cualquier usuario.
 
-1. Diseña la escarapela y llena en la sección **9** la fecha y el lugar del evento.
-2. Carga los participantes.
-3. **📋 Asistencia → ⇅ Sincronizar participantes** (al imprimir carnets también se sincroniza solo).
-4. Imprime en el modo que necesites: solo escarapelas, solo carnets o ambos.
-5. Al iniciar cada jornada: **▶ Habilitar escaneo**. Los participantes (o tú) escanean el QR con la cámara del celular → aparece *¡Asistencia registrada!* con fecha y hora.
-6. Al terminar la jornada: **⏸ Inhabilitar escaneo** (evita registros fuera de horario).
-7. Consulta, filtra y **⬇ Exportar a Excel** (pestañas *Resumen*, *Registros* e *Información*). Los datos también quedan en la hoja de Google.
+### Guardar y Guardar como
+- **Guardar** actualiza el proyecto abierto. Los participantes nuevos quedan habilitados para registrar asistencia.
+- **Guardar como** crea una **copia independiente** con QR nuevos. Sirve para reutilizar un diseño en otro evento.
+- Si otro usuario modificó el proyecto después de que lo abriste, la app avisa antes de reemplazar sus cambios.
 
-Reglas del registro: una asistencia por persona por día (si escanea de nuevo, se le informa la hora en que ya quedó registrado). Cada evento tiene un **código** propio (sección 9); *↻ Nuevo código* crea un evento nuevo con QR nuevos.
+### Backup (administrador)
+**📁 Proyectos → ⬇ Backup completo** descarga un archivo `.json` con todo: usuarios (contraseñas cifradas), proyectos con imágenes, participantes, asistencia y fondo del panel. Lleva una suma de verificación SHA-256. Guárdalo en un lugar seguro.
 
-## Uso rápido
+### Restaurar (administrador)
+**📁 Proyectos → ⬆ Restaurar backup** → elige el archivo → escribe **RESTAURAR**.
+- Antes de tocar nada, la app revisa que el archivo esté completo y no haya sido modificado. Si falla, no borra nada.
+- Luego **borra toda la información actual**, carga el backup por partes y al final **verifica** que los totales del servidor coincidan con los del backup.
+- Al terminar hay que ingresar de nuevo con un usuario que esté en el backup.
 
-1. **Encabezado y logo:** escribe los dos textos institucionales, carga el logo y elige su ubicación.
-2. **Título:** escribe las tres líneas del evento y ajusta tipo de letra y tamaño de cada una.
-3. **Colores:** elige el color base del evento → pulsa la paleta que más te guste → ajusta si quieres. 🎲 genera una combinación al azar.
-4. **Fondo e imágenes inferiores:** opcionales.
-5. **Participantes:** fija la cantidad y escribe los nombres, pégalos separados por coma o importa el Excel.
-6. **Vista previa de impresión:** elige papel, revisa las hojas y pulsa **Imprimir**.
+### Eliminar y borrar todo (administrador)
+- 🗑 en un proyecto → escribir **ELIMINAR**: borra su diseño, participantes y asistencia; sus QR dejan de funcionar.
+- **🗑 Borrar todo** → escribir **BORRAR TODO**: vacía todos los proyectos, carnets y asistencia. Los usuarios y el fondo del panel se conservan.
+- Los archivos de diseño van a la **papelera de Google Drive** del dueño del script, que la vacía sola a los 30 días; puedes vaciarla antes si lo prefieres. Los datos de asistencia se borran de inmediato de la hoja.
 
-### Al imprimir (clave para el tamaño exacto)
-
-En el cuadro de impresión del navegador (se recomienda **Google Chrome** o **Edge**):
-
-- **Escala:** 100 % / *Tamaño real* (nunca “Ajustar a la página”).
-- **Márgenes:** Ninguno.
-- **Opciones → Gráficos de fondo:** activado (si no, los colores salen en blanco).
-- **Encabezados y pies de página:** desactivado.
-- Para PDF: destino **Guardar como PDF**.
-
-Verifica la primera hoja con una regla: la escarapela debe medir exactamente lo que indica la app.
-
-### Formato de Excel recomendado
-
-| Tipo documento | Número | Nombres | Primer apellido | Segundo apellido | Rol |
-|---|---|---|---|---|---|
-| CC | 1001 | Ana María | Pérez | Gómez | Aprendiz |
-
-También funciona con una sola columna *Nombre completo*, sin encabezados, o con columnas en otro orden: antes de importar puedes corregir qué columna es cada dato y ver una muestra del resultado.
+### Al imprimir
+En el cuadro de impresión de Chrome o Edge usa **Escala 100 %**, **Márgenes: ninguno** y **Gráficos de fondo** activado. Desactiva encabezados y pies.
 
 ---
 
-## Seguridad: lo que debes saber
+## Seguridad
 
-- Las contraseñas se guardan **cifradas** (SHA-256 con sal aleatoria y 4.000 iteraciones), nunca en texto plano. Tras 5 intentos fallidos el acceso se bloquea 30 segundos. La sesión se cierra al cerrar la pestaña.
-- GitHub Pages solo publica archivos estáticos, por eso **usuarios, diseños y participantes se guardan en el navegador de cada equipo** (localStorage). Consecuencias:
-  - Un usuario creado en tu portátil no existe en otro computador. Usa **Usuarios → Exportar usuarios** y luego **Importar usuarios** en el otro equipo. Igual con los diseños: **Exportar / Importar plantilla**.
-  - Si se borran los datos del navegador, se pierden usuarios y diseños y vuelve a existir **Walter / 123456**. Guarda copias de los archivos exportados.
-  - El login protege el uso cotidiano, pero no es una barrera para alguien técnico con acceso al mismo navegador: el código es público. **No guardes datos sensibles** (documentos de identidad, etc.) en la app; solo nombres y rango.
-- **QR de asistencia:** cada QR lleva un token aleatorio de 20 caracteres; cambiar el ID en la URL no sirve para registrar a otra persona. Lo que no puede evitar un QR es que alguien escanee el carnet de un compañero o una foto de él: por eso existe el botón para **habilitar el escaneo solo durante la jornada**, y conviene que el instructor o un monitor sea quien escanee al ingreso.
-- La **clave de administrador** del servicio queda guardada en el navegador donde se configuró. Úsala solo en equipos de confianza y cámbiala (Apps Script + nueva versión de la implementación) si se compromete.
-- El servicio guarda solo nombre, rango, ID del carnet y fecha/hora: no se recogen datos sensibles. Aun así, al ser datos personales de aprendices (Ley 1581 de 2012), informa a los participantes la finalidad del registro.
-- Si más adelante necesitas usuarios compartidos entre todos los equipos, el siguiente paso es conectar un servicio con autenticación real (por ejemplo Firebase Authentication o Supabase); la estructura de `auth.js` está aislada para facilitar ese cambio.
-- La librería de Excel incluida es SheetJS 0.18.5 (última publicada en npm). Tiene vulnerabilidades conocidas solo explotables abriendo archivos manipulados; como aquí solo se abren listas propias y todo ocurre en tu navegador, el riesgo es bajo. Si quieres la versión más reciente, descarga `xlsx.full.min.js` desde <https://cdn.sheetjs.com> y reemplaza el archivo en `js/vendor/`.
+- Contraseñas cifradas en el servidor (SHA-256 con sal y 1.000 iteraciones). Mínimo **8 caracteres con letras y números**. Contraseña temporal obligatoria de cambiar.
+- Sesiones de 6 horas. Bloqueo de 5 minutos tras 5 intentos fallidos. Al cambiar o asignar una contraseña, y al restaurar un backup, **se cierran las sesiones abiertas** con la clave anterior.
+- Las imágenes se validan de forma estricta (solo PNG/JPEG/GIF/WEBP en base64), tanto en el navegador como en el servidor. La página aplica una **política de seguridad de contenido (CSP)** que solo permite ejecutar los scripts propios, y no se deja mostrar dentro de otra página (anti-clickjacking).
+- **Auditoría**: la pestaña *Auditoria* de la hoja de datos registra quién y cuándo creó usuarios, asignó claves, cambió roles, eliminó proyectos, borró todo, hizo backups o restauró. No se borra con “Borrar todo” ni con la restauración.
+- Al escanear un QR que no es válido, el servidor no revela si el evento existe ni si su registro está abierto.
+- El rol se verifica en el servidor en **cada** petición. Un usuario normal no puede borrar aunque manipule la página, y si un administrador elimina a un usuario, su sesión deja de valer al instante.
+- Cada QR lleva un token secreto de 20 caracteres: cambiar el ID en la URL no permite registrar a otra persona. Lo que un QR no puede impedir es que alguien escanee el carnet o una foto del carnet de un compañero. Por eso conviene habilitar el escaneo solo durante la jornada y que el instructor o un monitor escanee al ingreso.
+- El backup contiene datos personales (nombres) y los usuarios con sus contraseñas cifradas. Trátalo como información reservada (Ley 1581 de 2012).
 
 ---
 
@@ -193,17 +145,15 @@ También funciona con una sola columna *Nombre completo*, sin encabezados, o con
 
 | Problema | Solución |
 |---|---|
-| Sale una hoja en blanco extra o las escarapelas se ven más pequeñas | Escala 100 % y márgenes *Ninguno* en el cuadro de impresión. |
-| Los colores no se imprimen | Activa *Gráficos de fondo*. |
-| “No se pudo guardar automáticamente” | Las imágenes son muy pesadas. Usa imágenes más livianas o exporta la plantilla. |
-| Olvidé la contraseña de Walter | Otro administrador le asigna una nueva. Si no hay otro, borra los datos del sitio en el navegador (se pierde todo lo guardado ahí) y vuelve a entrar con Walter / 123456. |
-| Los tipos de letra se ven distintos | Se descargan de Google Fonts: requiere internet la primera vez. |
-| Cambié archivos en GitHub y no se ven | Espera 2 minutos y recarga con Ctrl + F5. |
-| “No se pudo conectar con el servicio de asistencia” | Revisa que la URL termine en `/exec` y que la implementación tenga acceso **Cualquier usuario**. |
-| “Clave de administrador incorrecta” | La clave del panel debe ser idéntica a `CLAVE_ADMIN` en Apps Script (y haber implementado una nueva versión tras cambiarla). |
-| Al escanear sale “Carnet no registrado” | Falta sincronizar: **📋 Asistencia → ⇅ Sincronizar participantes**. |
-| Al escanear sale “Registro cerrado” | Pulsa **▶ Habilitar escaneo** en el panel. |
-| No puedo imprimir carnets | Configura primero el servicio de asistencia: sin él los QR no tendrían a dónde registrar. |
+| “La URL responde, pero no es el servidor v4” | Pega el nuevo `Code.gs` y crea una **Nueva versión** de la implementación. |
+| “Respuesta inesperada del servidor” | La implementación debe tener acceso **Cualquier usuario**. |
+| Pide permisos de Drive al ejecutar `instalar` | Es normal en v4: autorízalos. |
+| Al escanear: “Registro cerrado” | Habilita el escaneo de ese proyecto en **📋 Asistencia**. |
+| Al escanear: “Carnet no registrado” | Ese participante se agregó sin guardar: abre el proyecto y pulsa **💾 Guardar**. |
+| Al escanear: “Evento no disponible” | El proyecto fue eliminado. Restaura un backup o vuelve a guardarlo con **Guardar como**. |
+| “Tu sesión expiró” | Ingresa de nuevo. Lo que tenías en pantalla queda como borrador en ese navegador. |
+| Olvidé la contraseña | Otro administrador asigna una nueva en **👥 Usuarios**. Si no hay otro administrador, en la hoja de datos, pestaña **Usuarios**, borra todas las filas de administradores y luego ingresa: el servidor recrea **Walter / 123456**. |
+| Cambié archivos en GitHub y no se ven | Espera 2 minutos y recarga con **Ctrl + F5**. |
 
 ---
 

@@ -2,6 +2,11 @@
 (function () {
   'use strict';
 
+  /* Anti-clickjacking: GitHub Pages no permite cabeceras X-Frame-Options, así que se bloquea por código */
+  if (window.top !== window.self) {
+    document.documentElement.innerHTML = '<body style="font-family:sans-serif;padding:2rem">Por seguridad, esta aplicación no puede mostrarse dentro de otra página. <a href="' + location.href.replace(/"/g, '') + '" target="_top">Abrir directamente</a>.</body>';
+    throw new Error('Bloqueado dentro de un marco');
+  }
   var B = window.Badge;
   var $ = function (sel, ctx) { return (ctx || document).querySelector(sel); };
   var $$ = function (sel, ctx) { return Array.prototype.slice.call((ctx || document).querySelectorAll(sel)); };
@@ -75,8 +80,9 @@
       },
       eventId: rid(8),
       logo: null, logoPos: 'center', logoSize: 22,
+      logo2: null, logo2Pos: 'center', logo2Size: 12, cardLogo2Pos: 'left', cardLogo2Size: 6,
       bg: null, overlay: 70,
-      foot: [null, null, null], footSize: 16,
+      foot: [null, null, null], footSize: 16, footScale: [100, 100, 100],
       baseColor: base, scheme: 'analoga', palette: B.makePalette(base, 'analoga'),
       theme: 'oscuro', pattern: 'circuitos', slot: true,
       size: { w: 100, h: 130 }
@@ -85,24 +91,34 @@
 
   /* ---------- Estado ---------- */
   var C = window.Carnet;
-  var state = { user: null, design: defaultDesign(), people: [newPerson()], current: 0, view: 'badge' };
+  /* meta: proyecto del servidor abierto ({id, name, updatedAt}) o null si es nuevo.
+   * savedSig: “huella” del contenido la última vez que se guardó o cargó; si cambia, hay cambios sin guardar. */
+  var state = { user: null, design: defaultDesign(), people: [newPerson()], current: 0, view: 'badge', meta: null, savedSig: '', saving: false };
   var excelData = null;
 
-  function storeKey(kind) { return 'escSena.' + kind + '.' + (state.user ? state.user.username.toLowerCase() : 'anon'); }
+  function storeKey(kind) { return 'escSena.v4.' + kind + '.' + (state.user ? state.user.username.toLowerCase() : 'anon'); }
 
-  var saveTimer = null, saveWarned = false;
-  function scheduleSave() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-      try {
-        localStorage.setItem(storeKey('design'), JSON.stringify(state.design));
-        localStorage.setItem(storeKey('people'), JSON.stringify(state.people));
-        saveWarned = false;
-      } catch (e) {
-        if (!saveWarned) { toast('No se pudo guardar automáticamente (imágenes muy pesadas). Usa “Exportar plantilla”.', 'warn', 6000); saveWarned = true; }
-      }
-    }, 400);
+  /* Huella barata del contenido: las imágenes se resumen (longitud + final) para no serializar MB en cada tecla */
+  function signature() {
+    var rep = function (k, v) { return typeof v === 'string' && v.length > 200 && v.indexOf('data:') === 0 ? 'img:' + v.length + ':' + v.slice(-40) : v; };
+    return JSON.stringify(state.design, rep) + '|' + JSON.stringify(state.people);
   }
+  function isDirty() { return signature() !== state.savedSig; }
+  function markSaved() { state.savedSig = signature(); renderProjectBar(); scheduleSave(); }
+
+  /* Borrador local: si se cierra el navegador sin guardar, el trabajo no se pierde */
+  var saveTimer = null, saveWarned = false;
+  function persistDraft() {
+    try {
+      localStorage.setItem(storeKey('design'), JSON.stringify(state.design));
+      localStorage.setItem(storeKey('people'), JSON.stringify(state.people));
+      localStorage.setItem(storeKey('meta'), JSON.stringify({ meta: state.meta, savedSig: state.savedSig }));
+      saveWarned = false;
+    } catch (e) {
+      if (!saveWarned) { toast('El borrador local no cabe en el navegador (imágenes pesadas). Guarda el proyecto en el servidor con 💾 Guardar.', 'warn', 6000); saveWarned = true; }
+    }
+  }
+  function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(persistDraft, 400); }
 
   function mergeDesign(saved) {
     var d = defaultDesign();
@@ -116,6 +132,12 @@
       ['bold', 'upper', 'italic'].forEach(function (p) { if (typeof s[p] === 'boolean') d.styles[k][p] = s[p]; });
     });
     if (B.isImg(saved.logo)) d.logo = saved.logo;
+    if (B.isImg(saved.logo2)) d.logo2 = saved.logo2;
+    if (['left', 'center', 'right'].indexOf(saved.logo2Pos) >= 0) d.logo2Pos = saved.logo2Pos;
+    if (['left', 'center', 'right'].indexOf(saved.cardLogo2Pos) >= 0) d.cardLogo2Pos = saved.cardLogo2Pos;
+    if (saved.logo2Size >= 6 && saved.logo2Size <= 40) d.logo2Size = +saved.logo2Size;
+    if (saved.cardLogo2Size >= 3 && saved.cardLogo2Size <= 14) d.cardLogo2Size = +saved.cardLogo2Size;
+    if (Array.isArray(saved.footScale)) d.footScale = [0, 1, 2].map(function (i) { var v = +saved.footScale[i]; return v >= 20 && v <= 100 ? v : 100; });
     if (B.isImg(saved.bg)) d.bg = saved.bg;
     if (Array.isArray(saved.foot)) d.foot = [0, 1, 2].map(function (i) { return B.isImg(saved.foot[i]) ? saved.foot[i] : null; });
     if (['left', 'center', 'right'].indexOf(saved.logoPos) >= 0) d.logoPos = saved.logoPos;
@@ -145,12 +167,35 @@
     return out.length ? out : [newPerson()];
   }
   function loadUserData() {
-    var d = null, p = null;
+    var d = null, p = null, m = null;
     try { d = JSON.parse(localStorage.getItem(storeKey('design')) || 'null'); } catch (e) { d = null; }
     try { p = JSON.parse(localStorage.getItem(storeKey('people')) || 'null'); } catch (e) { p = null; }
+    try { m = JSON.parse(localStorage.getItem(storeKey('meta')) || 'null'); } catch (e) { m = null; }
+    if (!d) {
+      // Primera vez en v4: recupera el diseño que el usuario tenía en la versión 3 (borrador local)
+      var legacy = 'escSena.%s.' + (state.user ? state.user.username.toLowerCase() : 'anon');
+      try { d = JSON.parse(localStorage.getItem(legacy.replace('%s', 'design')) || 'null'); } catch (e) { d = null; }
+      try { p = JSON.parse(localStorage.getItem(legacy.replace('%s', 'people')) || 'null'); } catch (e) { p = null; }
+      if (d) m = null;
+    }
     state.design = mergeDesign(d);
     state.people = sanitizePeople(p);
+    state.meta = m && m.meta && /^[A-Za-z0-9]{6,24}$/.test(m.meta.id || '') && m.meta.id === state.design.eventId ? m.meta : null;
+    state.savedSig = m && typeof m.savedSig === 'string' ? m.savedSig : (d ? '' : signature());
     state.current = 0;
+  }
+
+  /* ---------- Barra de proyecto ---------- */
+  function renderProjectBar() {
+    var dirty = isDirty();
+    $('#projName').textContent = state.meta ? state.meta.name : 'Nuevo proyecto (sin guardar)';
+    var st = $('#projState');
+    if (state.saving) { st.textContent = 'Guardando…'; st.className = 'proj-state'; }
+    else if (!state.meta) { st.textContent = 'Aún no está en el servidor: los QR no registran asistencia hasta guardarlo'; st.className = 'proj-state dirty'; }
+    else if (dirty) { st.textContent = '● Cambios sin guardar'; st.className = 'proj-state dirty'; }
+    else { st.textContent = '✓ Guardado · ' + (state.meta.updatedAt || ''); st.className = 'proj-state saved'; }
+    $('#btnSave').disabled = state.saving;
+    renderEventInfo();
   }
 
   /* ---------- Utilidades de UI ---------- */
@@ -214,12 +259,22 @@
   }
 
   /* =========================================================
-     LOGIN / SESIÓN
+     LOGIN / SESIÓN (en el servidor)
      ========================================================= */
-  function showLogin() {
+  function renderServerState() {
+    var url = API.serviceUrl(), st = $('#serverState');
+    $('#serverUrl').value = url;
+    $('#serverUrl').disabled = $('#btnServerSave').disabled = API.fixedByConfig();
+    if (!url) { st.textContent = '· sin configurar'; st.className = 'err'; $('#serverCfg').open = true; }
+    else { st.textContent = API.fixedByConfig() ? '· configurado en config.js' : '· configurado'; st.className = 'ok'; }
+  }
+  function showLogin(msg) {
     $('#appView').hidden = true;
     $('#loginView').hidden = false;
     $('#loginPass').value = '';
+    $('#loginError').textContent = msg || '';
+    $$('.modal').forEach(function (m) { delete m.dataset.forced; m.hidden = true; });
+    renderServerState();
     setTimeout(function () { $('#loginUser').focus(); }, 50);
   }
   function showApp() {
@@ -232,32 +287,49 @@
     loadUserData();
     syncAllControls();
     renderPeople();
+    renderProjectBar();
     renderPreview();
     if (state.user.mustChange) openPassModal(true);
   }
 
   $('#loginForm').addEventListener('submit', function (e) {
     e.preventDefault();
-    var btn = e.submitter || $('#loginForm button');
-    btn.disabled = true;
-    // setTimeout: deja que el navegador pinte el botón deshabilitado antes del hash (≈100 ms)
-    setTimeout(function () {
-      var r = Auth.login($('#loginUser').value, $('#loginPass').value);
-      btn.disabled = false;
-      if (!r.ok) { $('#loginError').textContent = r.error; $('#loginPass').select(); return; }
+    if (!API.serviceUrl()) { $('#loginError').textContent = 'Primero configura la URL del servidor (⚙ Servidor).'; $('#serverCfg').open = true; return; }
+    var btn = $('#btnLogin');
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    Auth.login($('#loginUser').value, $('#loginPass').value).then(function (user) {
       $('#loginError').textContent = '';
-      state.user = r.user;
+      state.user = user;
       showApp();
-    }, 20);
+    }).catch(function (err) {
+      $('#loginError').textContent = err.message;
+      $('#loginPass').select();
+    }).then(function () { btn.disabled = false; btn.textContent = 'Ingresar'; });
   });
-  $('#btnLogout').addEventListener('click', function () {
+  $('#btnServerSave').addEventListener('click', function () {
+    var url = $('#serverUrl').value.trim(), b = $('#btnServerSave');
+    try { API.setServiceUrl(url); } catch (err) { $('#loginError').textContent = err.message; return; }
+    b.disabled = true;
+    API.ping(url).then(function (r) {
+      $('#loginError').textContent = '';
+      toast('Servidor conectado (versión ' + r.version + ').', 'ok');
+      $('#serverCfg').open = false;
+      loadAppBg();
+    }).catch(function (err) { $('#loginError').textContent = err.message; })
+      .then(function () { b.disabled = false; renderServerState(); });
+  });
+  function logout(msg) {
     clearTimeout(saveTimer);
-    try {
-      localStorage.setItem(storeKey('design'), JSON.stringify(state.design));
-      localStorage.setItem(storeKey('people'), JSON.stringify(state.people));
-    } catch (e) { /* nada */ }
-    Auth.logout(); state.user = null; showLogin();
+    if (state.user) persistDraft();
+    Auth.logout();
+    state.user = null;
+    showLogin(msg);
+  }
+  $('#btnLogout').addEventListener('click', function () {
+    if (isDirty() && state.user && !confirm('Hay cambios sin guardar en el servidor. Quedarán solo como borrador en este navegador. ¿Salir de todas formas?')) return;
+    logout();
   });
+  API.onAuthLost = function (msg) { if (state.user) logout(msg + ' Tu trabajo quedó guardado como borrador en este navegador.'); };
 
   /* ---------- Cambio de contraseña ---------- */
   function openPassModal(forced) {
@@ -282,85 +354,90 @@
   $('#passForm').addEventListener('submit', function (e) {
     e.preventDefault();
     if ($('#pwNew').value !== $('#pwNew2').value) { $('#pwError').textContent = 'Las contraseñas nuevas no coinciden.'; return; }
-    try {
-      Auth.changeOwnPassword($('#pwOld').value, $('#pwNew').value);
-      state.user = Auth.current();
+    var btn = $('#passForm button[type=submit]');
+    btn.disabled = true;
+    Auth.changeOwnPassword($('#pwOld').value, $('#pwNew').value).then(function (u) {
+      state.user = u;
       var m = $('#passModal'); delete m.dataset.forced; m.hidden = true;
       toast('Contraseña actualizada.', 'ok');
-    } catch (err) { $('#pwError').textContent = err.message; }
+    }).catch(function (err) { $('#pwError').textContent = err.message; }).then(function () { btn.disabled = false; });
   });
 
-  /* ---------- Gestión de usuarios (solo administradores) ---------- */
-  function renderUsers() {
-    var me = Auth.current();
-    $('#usersBody').innerHTML = Auth.list().map(function (u) {
-      var self = me && u.username === me.username;
+  /* ---------- Gestión de usuarios (solo administradores; el servidor lo verifica) ---------- */
+  function renderUsers(list) {
+    var me = state.user;
+    $('#usersBody').innerHTML = list.map(function (u) {
+      var self = me && u.username.toLowerCase() === me.username.toLowerCase();
       return '<tr data-u="' + B.esc(u.username) + '"><td><strong>' + B.esc(u.username) + '</strong>' + (self ? ' <span class="tag">tú</span>' : '') +
         (u.mustChange ? ' <span class="tag">clave temporal</span>' : '') + '</td>' +
         '<td><select data-act="role"' + (self ? ' disabled' : '') + '><option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Usuario</option><option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Administrador</option></select></td>' +
-        '<td>' + (u.created ? new Date(u.created).toLocaleDateString('es-CO') : '—') + '</td>' +
+        '<td>' + B.esc(String(u.created || '—').slice(0, 10)) + (u.createdBy ? '<br><small>por ' + B.esc(u.createdBy) + '</small>' : '') + '</td>' +
         '<td><button class="btn btn-sm btn-ghost" data-act="pass">Asignar clave</button>' +
         (self ? '' : '<button class="btn btn-sm btn-ghost danger" data-act="del">Eliminar</button>') + '</td></tr>';
     }).join('');
   }
-  $('#btnUsers').addEventListener('click', function () { renderUsers(); $('#nuError').textContent = ''; openModal('#usersModal'); });
+  function usersOp(promise, okMsg) {
+    return promise.then(function (list) { renderUsers(list); if (okMsg) toast(okMsg, 'ok'); return list; })
+      .catch(function (err) { toast(err.message, 'err', 5000); return Auth.list().then(renderUsers).catch(function () { }); });
+  }
+  $('#btnUsers').addEventListener('click', function () {
+    $('#nuError').textContent = '';
+    $('#usersBody').innerHTML = '<tr><td colspan="4">Cargando…</td></tr>';
+    openModal('#usersModal');
+    usersOp(Auth.list());
+  });
   $('#newUserForm').addEventListener('submit', function (e) {
     e.preventDefault();
-    try {
-      Auth.create($('#nuName').value, $('#nuPass').value, $('#nuRole').value);
+    var btn = $('#newUserForm button'); btn.disabled = true;
+    Auth.create($('#nuName').value, $('#nuPass').value, $('#nuRole').value).then(function (list) {
+      renderUsers(list);
       toast('Usuario creado. Deberá cambiar la clave en su primer ingreso.', 'ok');
-      $('#newUserForm').reset(); $('#nuError').textContent = ''; renderUsers();
-    } catch (err) { $('#nuError').textContent = err.message; }
+      $('#newUserForm').reset(); $('#nuError').textContent = '';
+    }).catch(function (err) { $('#nuError').textContent = err.message; }).then(function () { btn.disabled = false; });
   });
   $('#usersBody').addEventListener('change', function (e) {
     if (e.target.dataset.act !== 'role') return;
-    var u = e.target.closest('tr').dataset.u;
-    try { Auth.setRole(u, e.target.value); toast('Rol actualizado.', 'ok'); } catch (err) { toast(err.message, 'err'); }
-    renderUsers();
+    usersOp(Auth.setRole(e.target.closest('tr').dataset.u, e.target.value), 'Rol actualizado.');
   });
   $('#usersBody').addEventListener('click', function (e) {
     var act = e.target.dataset && e.target.dataset.act;
     if (!act || act === 'role') return;
     var u = e.target.closest('tr').dataset.u;
-    try {
-      if (act === 'pass') {
-        var p = prompt('Nueva contraseña para “' + u + '” (mínimo 6 caracteres):');
-        if (p === null) return;
-        Auth.setPassword(u, p);
-        toast('Contraseña asignada. El usuario deberá cambiarla al ingresar.', 'ok');
-      } else if (act === 'del') {
-        if (!confirm('¿Eliminar definitivamente al usuario “' + u + '”?')) return;
-        Auth.remove(u);
-        try { localStorage.removeItem('escSena.design.' + u.toLowerCase()); localStorage.removeItem('escSena.people.' + u.toLowerCase()); } catch (er) { /* nada */ }
-        toast('Usuario eliminado.', 'ok');
-      }
-    } catch (err) { toast(err.message, 'err'); }
-    renderUsers();
-  });
-  $('#btnExportUsers').addEventListener('click', function () {
-    try { download('usuarios-escarapelas.json', new Blob([Auth.exportUsers()], { type: 'application/json' })); } catch (err) { toast(err.message, 'err'); }
-  });
-  $('#importUsers').addEventListener('change', function (e) {
-    var f = e.target.files[0]; e.target.value = '';
-    if (!f) return;
-    f.text().then(function (txt) {
-      var n = Auth.importUsers(txt);
-      toast(n + ' usuario(s) importado(s). Los existentes no se modificaron.', 'ok'); renderUsers();
-    }).catch(function (err) { toast(err.message || 'Archivo no válido.', 'err'); });
+    if (act === 'pass') {
+      ask({ title: 'Asignar contraseña', message: 'Nueva contraseña temporal para “' + u + '”. Deberá cambiarla al ingresar.', input: true, password: true, placeholder: 'Mínimo 8, con letras y números', minLength: 8, maxLength: 100, confirmText: 'Asignar' })
+        .then(function (p) { if (p) usersOp(Auth.setPassword(u, p), 'Contraseña asignada. El usuario deberá cambiarla al ingresar.'); });
+    } else if (act === 'del') {
+      ask({ title: 'Eliminar usuario', message: '¿Eliminar definitivamente al usuario “' + u + '”? Sus proyectos se conservan.', confirmText: 'Eliminar', danger: true })
+        .then(function (ok) { if (ok) usersOp(Auth.remove(u), 'Usuario eliminado.'); });
+    }
   });
 
-  /* ---------- Fondo del panel (1 o 2 imágenes, global para el navegador) ---------- */
-  var APPBG_KEY = 'escSena.appBg.v1';
+  /* ---------- Fondo del panel (1 o 2 imágenes, guardado en el servidor para todos) ---------- */
+  var APPBG_CACHE = 'escSena.appBg.cache.v4';
   var appBg = { imgs: [null, null], dim: 30 }, appBgTimer = null;
-  function loadAppBg() {
-    try {
-      var d = JSON.parse(localStorage.getItem(APPBG_KEY) || 'null');
-      if (d && Array.isArray(d.imgs)) appBg = { imgs: [0, 1].map(function (i) { return B.isImg(d.imgs[i]) ? d.imgs[i] : null; }), dim: d.dim >= 0 && d.dim <= 80 ? d.dim : 30 };
-    } catch (e) { /* nada */ }
+  function setAppBg(d) {
+    if (d && Array.isArray(d.imgs)) appBg = { imgs: [0, 1].map(function (i) { return B.isImg(d.imgs[i]) ? d.imgs[i] : null; }), dim: d.dim >= 0 && d.dim <= 80 ? +d.dim : 30 };
   }
+  function loadAppBg() {
+    try { setAppBg(JSON.parse(localStorage.getItem(APPBG_CACHE) || 'null')); } catch (e) { /* nada */ }
+    applyAppBg();
+    if (!API.serviceUrl()) return;
+    API.get({ a: 'settings' }).then(function (r) {
+      if (!r || !r.ok) return;
+      setAppBg((r.settings || {}).appBg || { imgs: [null, null], dim: 30 });
+      try { localStorage.setItem(APPBG_CACHE, JSON.stringify(appBg)); } catch (e) { /* sin espacio: solo se pierde la caché */ }
+      applyAppBg();
+    }).catch(function () { /* sin conexión: se usa la caché */ });
+  }
+  var bgSaveTimer = null;
   function saveAppBg() {
-    try { localStorage.setItem(APPBG_KEY, JSON.stringify(appBg)); return true; }
-    catch (e) { toast('La imagen es muy pesada para guardarse. Prueba con otra más liviana.', 'err', 5000); return false; }
+    clearTimeout(bgSaveTimer);
+    bgSaveTimer = setTimeout(function () {
+      API.call('saveSettings', { settings: { appBg: appBg } }, 90000).then(function () {
+        try { localStorage.setItem(APPBG_CACHE, JSON.stringify(appBg)); } catch (e) { /* nada */ }
+        toast('Fondo del panel guardado para todos los usuarios.', 'ok', 2200);
+      }).catch(function (err) { toast(err.message, 'err', 5000); });
+    }, 600);
   }
   function applyAppBg() {
     var imgs = appBg.imgs.filter(Boolean);
@@ -386,17 +463,62 @@
     inp.addEventListener('change', function () {
       var i = +inp.dataset.appbg, f = inp.files[0]; inp.value = '';
       if (!f) return;
-      readImage(f, 1920, false).then(function (url) {
-        var prev = appBg.imgs[i]; appBg.imgs[i] = url;
-        if (!saveAppBg()) appBg.imgs[i] = prev;
-        applyAppBg();
-      }).catch(function (err) { toast(err.message, 'err'); });
+      readImage(f, 1920, false).then(function (url) { appBg.imgs[i] = url; applyAppBg(); saveAppBg(); })
+        .catch(function (err) { toast(err.message, 'err'); });
     });
   });
   $$('[data-appbg-clear]').forEach(function (b) {
-    b.addEventListener('click', function () { appBg.imgs[+b.dataset.appbgClear] = null; saveAppBg(); applyAppBg(); });
+    b.addEventListener('click', function () { appBg.imgs[+b.dataset.appbgClear] = null; applyAppBg(); saveAppBg(); });
   });
   $('#appBgDim').addEventListener('input', function (e) { appBg.dim = +e.target.value; applyAppBg(); saveAppBg(); });
+
+  /* ---------- Diálogo propio (reemplaza prompt/confirm del navegador) ----------
+   * ask({title, message, input, password, value, placeholder, minLength, maxLength,
+   *      requireText, confirmText, danger, noCancel}) → Promise<string|true|null> */
+  var askResolve = null;
+  function ask(o) {
+    if (askResolve) askResolve(null);
+    return new Promise(function (resolve) {
+      askResolve = resolve;
+      $('#askTitle').textContent = o.title || 'Confirmar';
+      $('#askMsg').textContent = o.message || '';
+      var needInput = !!(o.input || o.requireText);
+      $('#askLabel').hidden = !needInput;
+      $('#askLabelText').textContent = o.requireText ? 'Para confirmar, escribe ' + o.requireText : '';
+      var inp = $('#askInput');
+      inp.type = o.password ? 'password' : 'text';
+      inp.value = o.requireText ? '' : (o.value || '');
+      inp.placeholder = o.requireText || o.placeholder || '';
+      inp.maxLength = o.maxLength || 200;
+      $('#askError').textContent = '';
+      $('#askOk').textContent = o.confirmText || 'Aceptar';
+      $('#askOk').className = 'btn ' + (o.danger ? 'btn-danger' : 'btn-primary');
+      $('#askCancel').hidden = !!o.noCancel;
+      $('#askModal').dataset.forced = '1';
+      $('#askModal').dataset.opts = JSON.stringify({ input: !!o.input, requireText: o.requireText || '', minLength: o.minLength || 0 });
+      $('#askModal').hidden = false;
+      setTimeout(function () { if (needInput) { inp.focus(); inp.select(); } else $('#askOk').focus(); }, 30);
+    });
+  }
+  function closeAsk(val) {
+    $('#askModal').hidden = true;
+    var r = askResolve; askResolve = null;
+    if (r) r(val);
+  }
+  $('#askForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var o = JSON.parse($('#askModal').dataset.opts || '{}'), v = $('#askInput').value.replace(/\s+/g, ' ').trim();
+    if (o.requireText) {
+      if (v !== o.requireText) { $('#askError').textContent = 'Escribe exactamente ' + o.requireText + ' para confirmar.'; return; }
+      return closeAsk(true);
+    }
+    if (o.input) {
+      if (v.length < (o.minLength || 1)) { $('#askError').textContent = 'Debe tener al menos ' + (o.minLength || 1) + ' caracteres.'; return; }
+      return closeAsk($('#askInput').type === 'password' ? $('#askInput').value : v);
+    }
+    closeAsk(true);
+  });
+  $('#askCancel').addEventListener('click', function () { closeAsk(null); });
 
   /* ---------- Modales: cerrar ---------- */
   document.addEventListener('click', function (e) {
@@ -405,6 +527,7 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
+    if (!$('#askModal').hidden) { if (!$('#askCancel').hidden) closeAsk(null); return; }
     var open = $$('.modal').filter(function (m) { return !m.hidden; }).pop();
     if (open) closeModal(open);
   });
@@ -480,6 +603,11 @@
       ['bold', 'italic', 'upper'].forEach(function (p) { $('[data-prop=' + p + ']', box).setAttribute('aria-pressed', String(!!st[p])); });
     });
     setSegmented('logoPos', d.logoPos);
+    setSegmented('logo2Pos', d.logo2Pos);
+    setSegmented('cardLogo2Pos', d.cardLogo2Pos);
+    $('#logo2Size').value = d.logo2Size; $('#logo2SizeOut').textContent = fmt(d.logo2Size) + ' mm';
+    $('#cardLogo2Size').value = d.cardLogo2Size; $('#cardLogo2SizeOut').textContent = fmt(d.cardLogo2Size) + ' mm';
+    [0, 1, 2].forEach(function (i) { $('[data-footscale="' + i + '"]').value = d.footScale[i]; $('#footScaleOut' + i).textContent = d.footScale[i] + ' %'; });
     setSegmented('theme', d.theme);
     $('#logoSize').value = d.logoSize; $('#logoSizeOut').textContent = d.logoSize + ' mm';
     $('#footSize').value = d.footSize; $('#footSizeOut').textContent = d.footSize + ' mm';
@@ -489,7 +617,7 @@
     $('#baseColor').value = d.baseColor.toLowerCase();
     $('#baseColorHex').value = d.baseColor.toUpperCase();
     renderPalettes();
-    ['logo', 'bg', 'foot0', 'foot1', 'foot2'].forEach(renderThumb);
+    ['logo', 'logo2', 'bg', 'foot0', 'foot1', 'foot2'].forEach(renderThumb);
     syncSize();
     $('#count').value = state.people.length;
     updateSheetsInfo();
@@ -502,10 +630,12 @@
   }
   function renderEventInfo() {
     $('#eventCode').textContent = state.design.eventId;
-    var url = AttendanceModule.serviceUrl();
-    $('#serviceState').innerHTML = url
-      ? '✅ Servicio de asistencia configurado. Los QR quedan listos para registrar asistencia.'
-      : '⚠️ Falta configurar el servicio de asistencia (📋 Asistencia → ⚙ Configuración). Sin él no se pueden imprimir carnets.';
+    var el = $('#serviceState');
+    if (!el) return;
+    if (!API.serviceUrl()) el.innerHTML = '⚠️ Falta configurar el servidor. Sin él no se pueden generar carnets con QR.';
+    else if (!state.meta) el.innerHTML = '⚠️ Guarda el proyecto (💾 Guardar) para que los QR registren asistencia.';
+    else if (isDirty()) el.innerHTML = '⚠️ Hay cambios sin guardar: los participantes nuevos no registrarán asistencia hasta guardar.';
+    else el.innerHTML = '✅ Proyecto guardado: los QR de sus carnets registran asistencia mientras el escaneo esté habilitado.';
   }
 
   /* ---------- Paletas ---------- */
@@ -541,7 +671,7 @@
   function renderThumb(key) {
     var v = imgValue(key), t = $('#thumb-' + key);
     if (!t) return;
-    t.innerHTML = B.isImg(v) ? '<img src="' + v + '" alt="">' : '<span>' + (key === 'logo' ? 'Sin logo' : key === 'bg' ? 'Sin fondo' : 'Vacío') + '</span>';
+    t.innerHTML = B.isImg(v) ? '<img src="' + v + '" alt="">' : '<span>' + (key === 'logo' ? 'Sin logo' : key === 'logo2' ? 'Aquí se agrega el logo SENA' : key === 'bg' ? 'Sin fondo' : 'Vacío') + '</span>';
   }
 
   /* ---------- Tamaño (exacto) ---------- */
@@ -558,7 +688,7 @@
 
   /* ---------- Vista previa ---------- */
   var rafId = 0;
-  function changed() { scheduleSave(); cancelAnimationFrame(rafId); rafId = requestAnimationFrame(renderPreview); }
+  function changed() { scheduleSave(); cancelAnimationFrame(rafId); rafId = requestAnimationFrame(function () { renderPreview(); renderProjectBar(); }); }
 
   function currentPerson() {
     state.current = Math.max(0, Math.min(state.current, state.people.length - 1));
@@ -569,7 +699,7 @@
     if (!stage || $('#appView').hidden) return;
     var d = state.design;
     var isCard = state.view === 'card';
-    var badge = isCard ? C.build(d, currentPerson(), { mode: 'edit', serviceUrl: AttendanceModule.serviceUrl(), placeholders: PH }) : B.build(d, currentPerson(), 'edit', PH);
+    var badge = isCard ? C.build(d, currentPerson(), { mode: 'edit', serviceUrl: API.serviceUrl(), placeholders: PH }) : B.build(d, currentPerson(), 'edit', PH);
     var mmW = isCard ? C.W : d.size.w, mmH = isCard ? C.H : d.size.h;
     var wpx = mmW * B.PX_PER_MM, hpx = mmH * B.PX_PER_MM;
     var availW = Math.max(120, stage.clientWidth - 36), availH = Math.max(160, stage.clientHeight - 36);
@@ -816,6 +946,29 @@
       var b = e.target.closest('button'); if (!b) return;
       state.design.theme = b.dataset.v; setSegmented('theme', b.dataset.v); changed();
     });
+    var showBadge = function () { if (state.view !== 'badge') { state.view = 'badge'; setSegmented('previewView', 'badge'); } };
+    $('#logo2Pos').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      state.design.logo2Pos = b.dataset.v; setSegmented('logo2Pos', b.dataset.v); showBadge(); changed();
+    });
+    $('#cardLogo2Pos').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      state.design.cardLogo2Pos = b.dataset.v; setSegmented('cardLogo2Pos', b.dataset.v);
+      if (state.view !== 'card') { state.view = 'card'; setSegmented('previewView', 'card'); }
+      changed();
+    });
+    $('#logo2Size').addEventListener('input', function (e) { state.design.logo2Size = +e.target.value; $('#logo2SizeOut').textContent = fmt(+e.target.value) + ' mm'; showBadge(); changed(); });
+    $('#cardLogo2Size').addEventListener('input', function (e) {
+      state.design.cardLogo2Size = +e.target.value; $('#cardLogo2SizeOut').textContent = fmt(+e.target.value) + ' mm';
+      if (state.view !== 'card') { state.view = 'card'; setSegmented('previewView', 'card'); }
+      changed();
+    });
+    $$('[data-footscale]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var i = +inp.dataset.footscale;
+        state.design.footScale[i] = +inp.value; $('#footScaleOut' + i).textContent = inp.value + ' %'; showBadge(); changed();
+      });
+    });
     $('#logoSize').addEventListener('input', function (e) { state.design.logoSize = +e.target.value; $('#logoSizeOut').textContent = e.target.value + ' mm'; changed(); });
     $('#footSize').addEventListener('input', function (e) { state.design.footSize = +e.target.value; $('#footSizeOut').textContent = e.target.value + ' mm'; changed(); });
     $('#overlay').addEventListener('input', function (e) { state.design.overlay = +e.target.value; $('#overlayOut').textContent = e.target.value + ' %'; changed(); });
@@ -850,7 +1003,7 @@
       inp.addEventListener('change', function () {
         var key = inp.dataset.upload, f = inp.files[0]; inp.value = '';
         if (!f) return;
-        var cfg = key === 'bg' ? [1800, false] : key === 'logo' ? [900, true] : [700, true];
+        var cfg = key === 'bg' ? [1800, false] : (key === 'logo' || key === 'logo2') ? [900, true] : [700, true];
         readImage(f, cfg[0], cfg[1]).then(function (url) {
           setImg(key, url); renderThumb(key); changed();
           toast('Imagen cargada.', 'ok', 1800);
@@ -881,7 +1034,6 @@
     $('#btnExport').addEventListener('click', function () {
       var data = { type: 'escSena.template', version: 1, exported: new Date().toISOString(), design: state.design };
       if ($('#exportPeople').checked) data.people = state.people;
-      if (AttendanceModule.serviceUrl()) data.serviceUrl = AttendanceModule.serviceUrl();
       var name = slug((state.design.texts.t1 || '') + ' ' + (state.design.texts.t2 || '')) || 'evento';
       download('plantilla_' + name + '.json', new Blob([JSON.stringify(data)], { type: 'application/json' }));
     });
@@ -893,16 +1045,18 @@
         if (!data || data.type !== 'escSena.template' || !data.design) throw new Error('El archivo no es una plantilla de escarapelas.');
         state.design = mergeDesign(data.design);
         if (Array.isArray(data.people) && data.people.length) state.people = sanitizePeople(data.people);
-        if (data.serviceUrl) AttendanceModule.setUrlIfEmpty(String(data.serviceUrl));
+        // Una plantilla importada es un proyecto NUEVO: códigos y QR nuevos para no chocar con el original
+        regenerateIds();
+        state.meta = null;
         state.current = 0;
         syncAllControls(); renderPeople(); changed();
-        toast('Plantilla importada.', 'ok');
+        toast('Plantilla importada como proyecto nuevo. Pulsa 💾 Guardar para ponerle nombre.', 'ok', 5000);
       }).catch(function (err) { toast(err.message || 'Archivo no válido.', 'err'); });
     });
     $('#btnReset').addEventListener('click', function () {
-      if (!confirm('¿Reiniciar el diseño? Se borran textos, colores e imágenes y se crea un nuevo código de evento (los participantes se conservan).')) return;
-      var keepSize = state.design.size;
-      state.design = defaultDesign(); state.design.size = keepSize;
+      if (!confirm('¿Reiniciar el diseño? Se borran textos, colores e imágenes de este proyecto (los participantes y sus QR se conservan).')) return;
+      var keepSize = state.design.size, keepId = state.design.eventId;
+      state.design = defaultDesign(); state.design.size = keepSize; state.design.eventId = keepId;
       syncAllControls(); changed();
     });
 
@@ -910,15 +1064,18 @@
       var b = e.target.closest('button'); if (!b) return;
       state.view = b.dataset.v; setSegmented('previewView', b.dataset.v); changed();
     });
-    $('#btnNewEvent').addEventListener('click', function () {
-      if (!confirm('Se generará un nuevo código de evento. Los carnets ya impresos quedarán asociados al código anterior. ¿Continuar?')) return;
-      state.design.eventId = rid(8);
-      state.people.forEach(function (p) { p.id = rid(10); p.token = rid(20); });
-      renderEventInfo(); changed();
-      toast('Nuevo código de evento: ' + state.design.eventId + '. Recuerda sincronizar los participantes.', 'ok', 5000);
+    $('#btnOpenAtt').addEventListener('click', function () { AttendanceModule.open(state.meta ? state.meta.id : ''); });
+    $('#btnAttendance').addEventListener('click', function () { AttendanceModule.open(state.meta ? state.meta.id : ''); });
+    $('#btnSave').addEventListener('click', function () { ProjectsModule.save(); });
+    $('#btnSaveAs').addEventListener('click', function () { ProjectsModule.saveAs(); });
+    $('#btnProjects').addEventListener('click', function () { ProjectsModule.open(); });
+    $('#btnNewProject').addEventListener('click', function () { ProjectsModule.newProject(); });
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S') && !$('#appView').hidden) { e.preventDefault(); ProjectsModule.save(); }
     });
-    $('#btnOpenAtt').addEventListener('click', function () { AttendanceModule.open(); });
-    $('#btnAttendance').addEventListener('click', function () { AttendanceModule.open(); });
+    window.addEventListener('beforeunload', function (e) {
+      if (state.user && isDirty()) { persistDraft(); e.preventDefault(); e.returnValue = ''; }
+    });
     $('#printMode').addEventListener('change', renderPrint);
     $('#btnPrint').addEventListener('click', openPrint);
     $('#paper').addEventListener('change', renderPrint);
@@ -973,13 +1130,13 @@
     pos.appendChild(node);
     sheet.appendChild(pos);
   }
-  function cardFor(p) { return C.build(state.design, p, { mode: 'final', serviceUrl: AttendanceModule.serviceUrl(), placeholders: PH }); }
+  function cardFor(p) { return C.build(state.design, p, { mode: 'final', serviceUrl: API.serviceUrl(), placeholders: PH }); }
 
   function buildSheets(paperKey, mode) {
     var L = layout(paperKey, mode);
     if (!L) return { error: mode === 'badges' ? 'La escarapela no cabe 4 veces en este papel. Reduce el tamaño.' : 'Las piezas no caben en este papel.' };
-    if (mode !== 'badges' && !AttendanceModule.serviceUrl()) {
-      return { error: 'Para imprimir carnets primero configura el servicio de asistencia (📋 Asistencia → ⚙ Configuración). Sin él, los QR no registrarían asistencia.' };
+    if (mode !== 'badges' && !API.serviceUrl()) {
+      return { error: 'Para imprimir carnets primero configura el servidor. Sin él, los QR no registrarían asistencia.' };
     }
     var people = printablePeople(), cut = $('#cutGuides').checked, per = L.slots.length, d = state.design, sheets = [];
     for (var i = 0; i < people.length; i += per) {
@@ -1055,19 +1212,14 @@
       setTimeout(function () { window.print(); }, 60);
     });
   }
-  /* Antes de imprimir carnets se sincroniza la lista: así cada QR impreso ya es válido en el servicio */
+  /* Antes de imprimir carnets el proyecto debe estar guardado: así cada QR impreso ya es válido en el servidor */
   function doPrint() {
     var mode = $('#printMode').value, btn = $('#btnDoPrint');
-    if (mode === 'badges' || !AttendanceModule.configured()) {
-      if (mode !== 'badges') toast('Recuerda sincronizar los participantes en 📋 Asistencia para que los QR funcionen.', 'warn', 5000);
-      return sendToPrinter();
-    }
-    btn.disabled = true; btn.textContent = 'Sincronizando…';
-    AttendanceModule.syncPeople(true).then(function (res) {
-      toast('Participantes sincronizados (' + res.participants + ' en el servicio).', 'ok');
-      sendToPrinter();
-    }).catch(function (err) {
-      if (confirm('No se pudo sincronizar la lista con el servicio de asistencia:\n' + err.message + '\n\n¿Imprimir de todas formas? (Luego sincroniza desde 📋 Asistencia)')) sendToPrinter();
+    if (mode === 'badges') return sendToPrinter();
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    ProjectsModule.ensureSaved().then(function (ok) {
+      if (ok) { renderPrint(); sendToPrinter(); }
+      else toast('Impresión cancelada: guarda el proyecto para que los QR funcionen.', 'warn', 4500);
     }).then(function () { btn.disabled = false; btn.textContent = '🖨 Imprimir'; });
   }
   window.addEventListener('afterprint', function () { $('#printRoot').innerHTML = ''; });
@@ -1086,7 +1238,8 @@
   }
   function ready(kind) {
     if (!window.html2canvas) { toast('No se pudo cargar el generador de imágenes (js/vendor).', 'err'); return null; }
-    if (kind === 'card' && !AttendanceModule.serviceUrl()) { toast('Configura el servicio de asistencia para generar carnets con QR.', 'warn', 5000); return null; }
+    if (kind === 'card' && !API.serviceUrl()) { toast('Configura el servidor para generar carnets con QR.', 'warn', 5000); return null; }
+    if (kind === 'card' && (!state.meta || isDirty())) toast('Recuerda guardar el proyecto: los QR solo funcionan con el proyecto guardado.', 'warn', 5000);
     return document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
   }
   function exportPng() {
@@ -1128,21 +1281,77 @@
   /* =========================================================
      INICIO
      ========================================================= */
+  /* Códigos nuevos (proyecto y QR de cada persona): para “Guardar como” y plantillas importadas */
+  function regenerateIds() {
+    state.design.eventId = rid(8);
+    state.people.forEach(function (p) { p.id = rid(10); p.token = rid(20); });
+  }
+  function applyProject(data, meta) {
+    var d = data && data.design ? mergeDesign(data.design) : defaultDesign();
+    d.eventId = meta.id; // el código del proyecto manda: es el que llevan los QR impresos
+    state.design = d;
+    state.people = sanitizePeople(data && data.people && data.people.length ? data.people : null);
+    state.meta = { id: meta.id, name: meta.name, updatedAt: meta.updatedAt };
+    state.current = 0;
+    syncAllControls(); renderPeople();
+    markSaved(); changed();
+    if (data && !data.design) toast('Este proyecto viene de la versión 3 y no tenía diseño guardado: se cargaron sus participantes con el diseño básico. Ajusta el diseño y guarda.', 'warn', 7000);
+  }
+  function blankProject() {
+    var keepSize = state.design.size;
+    state.design = defaultDesign(); state.design.size = keepSize;
+    state.people = [newPerson()];
+    state.meta = null; state.current = 0;
+    syncAllControls(); renderPeople();
+    markSaved(); changed();
+  }
+
   function init() {
     B.loadFonts();
-    loadAppBg(); applyAppBg();
+    loadAppBg();
     buildFieldControls();
     bindControls();
+    var isAdmin = function () { return !!(state.user && state.user.role === 'admin'); };
     AttendanceModule.init({
-      getEvent: eventInfo,
-      getPeople: function () { return state.people; },
-      isAdmin: function () { return !!(state.user && state.user.role === 'admin'); },
-      onConfigChanged: function () { renderEventInfo(); changed(); },
-      toast: toast, esc: B.esc, slug: slug
+      isAdmin: isAdmin, toast: toast, esc: B.esc, slug: slug,
+      currentProjectId: function () { return state.meta ? state.meta.id : ''; },
+      loadProject: function (id) { ProjectsModule.load(id); },
+      onScanChanged: function () { }
+    });
+    ProjectsModule.init({
+      isAdmin: isAdmin, toast: toast, esc: B.esc, download: download, ask: ask,
+      username: function () { return state.user ? state.user.username : ''; },
+      getDraft: function () { return { design: state.design, people: state.people }; },
+      getMeta: function () { return state.meta; },
+      setMeta: function (m) { state.meta = m; renderProjectBar(); scheduleSave(); },
+      isDirty: isDirty,
+      setDirty: function (v) { if (!v) markSaved(); },
+      setSaving: function (v) { state.saving = v; renderProjectBar(); },
+      regenerateIds: function () { regenerateIds(); renderEventInfo(); changed(); },
+      apply: applyProject,
+      newProject: blankProject,
+      openAttendance: function (id) { AttendanceModule.open(id); },
+      onProjectDeleted: function (id) {
+        if (state.meta && (id === '*' || state.meta.id === id)) {
+          state.meta = null; state.savedSig = ''; renderProjectBar(); scheduleSave();
+          toast('El proyecto que tenías abierto fue eliminado. Tu trabajo sigue en pantalla como proyecto nuevo sin guardar.', 'warn', 6000);
+        }
+      },
+      onRestored: function () { blankProject(); persistDraft(); logout('Restauración completa. Ingresa con un usuario del backup.'); }
     });
     if (document.fonts) document.fonts.addEventListener('loadingdone', function () { changed(); });
     var u = Auth.current();
-    if (u) { state.user = u; showApp(); } else showLogin();
+    if (u && API.serviceUrl()) {
+      state.user = u; showApp();
+      // Confirma con el servidor que la sesión sigue viva (si expiró, onAuthLost vuelve al ingreso)
+      Auth.refresh().then(function (fresh) {
+        state.user = fresh;
+        $('#userBadge').innerHTML = B.esc(fresh.username) + ' · <b>' + (fresh.role === 'admin' ? 'Administrador' : 'Usuario') + '</b>';
+        $('#btnUsers').hidden = $('#btnAppBg').hidden = fresh.role !== 'admin';
+        syncSize();
+        if (fresh.mustChange) openPassModal(true);
+      }).catch(function () { });
+    } else showLogin();
   }
   init();
 })();

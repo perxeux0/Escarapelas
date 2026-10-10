@@ -189,7 +189,11 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
     });
   }
-  function isImg(src) { return typeof src === 'string' && /^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);base64,/i.test(src); }
+  /* Imagen embebida segura: SOLO formatos raster y SOLO caracteres base64 hasta el final.
+   * Por qué completo y no solo el prefijo: el valor se inserta en atributos HTML/CSS; cualquier
+   * carácter fuera de base64 (comillas, paréntesis, espacios) podría romper el atributo. */
+  var IMG_RE = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+\/]+={0,2}$/;
+  function isImg(src) { return typeof src === 'string' && src.length < 15000000 && IMG_RE.test(src); }
 
   function styleOf(st) {
     return 'font-family:' + fontStack(st.font) + ';font-size:' + st.size + 'pt;font-weight:' + (st.bold ? 700 : 400) +
@@ -245,6 +249,12 @@
     html += d.slot ? '<div class="b-slot"></div>' : '';
 
     html += '<div class="b-content">';
+    // Logo SENA (superior): posición y tamaño propios, encima del encabezado y del logo del evento
+    if (isImg(d.logo2)) {
+      html += '<div class="b-logo2 pos-' + d.logo2Pos + '" style="height:' + d.logo2Size + 'mm"><img src="' + d.logo2 + '" alt=""></div>';
+    } else if (mode === 'edit') {
+      html += '<div class="b-logo2 pos-' + d.logo2Pos + '" style="height:' + d.logo2Size + 'mm"><div class="b-logo2-ph">Aquí se agrega el logo SENA</div></div>';
+    }
     html += '<header class="b-head">' +
       textEl('b-h1', T.h1, ph.h1, S.h1, mode) + textEl('b-h2', T.h2, ph.h2, S.h2, mode) + '</header>';
 
@@ -271,7 +281,8 @@
     if (hasFoot || mode === 'edit') {
       html += '<footer class="b-foot">';
       for (var i = 0; i < 3; i++) {
-        html += '<div class="b-foot-cell">' + (isImg(feet[i]) ? '<img src="' + feet[i] + '" alt="">' : '') + '</div>';
+        var sc = (d.footScale && d.footScale[i]) || 100;
+        html += '<div class="b-foot-cell">' + (isImg(feet[i]) ? '<img src="' + feet[i] + '" alt="" style="height:' + sc + '%;max-height:' + sc + '%">' : '') + '</div>';
       }
       html += '</footer>';
     }

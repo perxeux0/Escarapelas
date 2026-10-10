@@ -429,6 +429,63 @@ body.has-appbg .preview-stage { background: radial-gradient(circle at 50% 30%, r
 }
 
 /* =========================================================
+   VERSIÓN 4: proyectos, diálogo, servidor
+   ========================================================= */
+.project-bar {
+  position: sticky; top: 64px; z-index: 15; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+.project-info { display: flex; flex-direction: column; min-width: 0; flex: 1 1 180px; }
+.project-info .lbl { margin: 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.project-info strong { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proj-state { font-size: 11.5px; color: var(--muted); }
+.proj-state.dirty { color: #b45309; font-weight: 700; }
+.proj-state.saved { color: #166534; font-weight: 600; }
+.project-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.proj-search { flex: 1 1 220px; max-width: 360px; }
+.admin-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-left: 10px; border-left: 2px solid #fecaca; }
+.admin-tag { font-size: 11px; font-weight: 800; color: #991b1b; background: #fee2e2; padding: .3em .7em; border-radius: 99px; text-transform: uppercase; letter-spacing: .04em; }
+.proj-table td.actions { white-space: nowrap; text-align: right; }
+.proj-table td.actions .btn { margin-left: 4px; }
+.proj-table tr.is-current td { background: #f0fdf4; }
+.tag.ok { background: #dcfce7; color: #166534; }
+.scan-dot { font-size: 11.5px; font-weight: 700; padding: .25em .6em; border-radius: 99px; white-space: nowrap; }
+.scan-dot.on { background: #dcfce7; color: #166534; }
+.scan-dot.off { background: #f1f5f9; color: #64748b; }
+.progress { display: flex; align-items: center; gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: #eff6ff; font-size: 12.5px; font-weight: 600; color: #1e3a8a; }
+.progress-bar { flex: 0 0 240px; height: 10px; background: #dbeafe; border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #2563eb, var(--sena)); transition: width .3s; }
+.att-status.ok { color: #166534; font-weight: 600; }
+.att-project select { min-width: 260px; max-width: 420px; }
+.ask-layer { z-index: 70; }
+.ask-msg { margin: 0 0 6px; line-height: 1.55; white-space: pre-line; }
+.server-cfg { margin-top: 14px; font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 10px; }
+.server-cfg summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+.server-cfg input { margin-top: 6px; font-size: 12.5px; }
+#serverState.ok { color: #166534; }
+#serverState.err { color: var(--danger); }
+.btn.is-busy { pointer-events: none; opacity: .55; }
+@media (max-width: 980px) { .project-bar { position: static; } }
+
+/* Logo SENA (escarapela y carnet) e imágenes inferiores escalables */
+.b-logo2, .c-logo2 { flex: none; display: flex; align-items: center; }
+.b-logo2.pos-left, .c-logo2.pos-left { justify-content: flex-start; }
+.b-logo2.pos-center, .c-logo2.pos-center { justify-content: center; }
+.b-logo2.pos-right, .c-logo2.pos-right { justify-content: flex-end; }
+.b-logo2 img, .c-logo2 img { height: 100%; width: auto; max-width: 100%; object-fit: contain; }
+.b-logo2 img { filter: drop-shadow(0 .4mm .8mm rgba(0, 0, 0, .25)); }
+.b-logo2-ph, .c-logo2-ph {
+  height: 100%; aspect-ratio: 2.4 / 1; max-width: 100%; border: .35mm dashed currentColor; border-radius: 1.5mm; opacity: .5;
+  display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 1.5mm;
+  font: 600 6pt 'Montserrat', sans-serif; line-height: 1.15;
+}
+.c-logo2-ph { font-size: 4.6pt; border-width: .25mm; }
+.b-foot-cell img { width: auto; object-fit: contain; }
+.size-row { display: grid; grid-template-columns: 1fr; gap: 2px; margin-top: 4px; }
+.size-row .lbl { margin: 6px 0 0; }
+.foot-uploads .size-row input { width: 100%; }
+
+/* =========================================================
    3) IMPRESIÓN
    ========================================================= */
 .sheet { position: relative; background: #fff; overflow: hidden; }
