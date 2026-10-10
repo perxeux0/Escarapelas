@@ -90,16 +90,16 @@ Las escarapelas no requieren servidor. El **registro de asistencia** sí necesit
 
 ```bash
 # 1. Entra a la carpeta del proyecto
-cd escarapelas-sena
+cd escarapelas
 
 # 2. Inicializa el repositorio y haz el primer commit
 git init
 git add .
-git commit -m "Primera versión: generador de escarapelas SENA"
+git commit -m "Primera versión: generador de escarapelas"
 git branch -M main
 
 # 3. Conecta con el repositorio creado en GitHub (paso 2 de la opción A)
-git remote add origin https://github.com/TU-USUARIO/escarapelas-sena.git
+git remote add origin https://github.com/TU-USUARIO/escarapelas.git
 git push -u origin main
 ```
 
@@ -116,9 +116,9 @@ GitHub Pages se actualiza solo en 1–2 minutos. Si no ves el cambio, recarga co
 
 ## Servicio de asistencia (Google Apps Script) — paso a paso
 
-Hazlo una sola vez. Se recomienda una cuenta **Gmail personal o institucional que permita compartir con “Cualquier usuario”** (algunas cuentas de dominio como @sena.edu.co bloquean esa opción; si no aparece, usa un Gmail).
+Hazlo una sola vez. Se recomienda una cuenta **Gmail personal o institucional que permita compartir con “Cualquier usuario”** (algunas cuentas de dominio como @universidad.edu.co bloquean esa opción; si no aparece, usa un Gmail).
 
-1. Entra a <https://sheets.google.com> y crea una hoja nueva. Llámala, por ejemplo, **Asistencia Escarapelas SENA**.
+1. Entra a <https://sheets.google.com> y crea una hoja nueva. Llámala, por ejemplo, **Asistencia Escarapelas**.
 2. En la hoja: **Extensiones → Apps Script**.
 3. Borra el contenido de `Código.gs` y **pega todo el archivo `gas/Code.gs`** del proyecto.
 4. En la línea `var CLAVE_ADMIN = 'CAMBIA-ESTA-CLAVE';` escribe una clave secreta **de 12 o más caracteres** (ej. `Bootcamp-CAI-2026*xq`). Guarda (💾).
