@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Escarapelas SENA · Centro de Automatización Industrial</title>
+  <meta name="description" content="Generador profesional de escarapelas para eventos y bootcamps del SENA – Centro de Automatización Industrial, Regional Caldas.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+  <style id="pageStyle">@page { size: 215.9mm 279.4mm; margin: 0; }</style>
+</head>
+<body>
+<!-- Fondo del panel (1 o 2 imágenes, cargadas por un administrador) -->
+<div id="appBg" class="app-bg" aria-hidden="true"><div class="bg-layer" id="bgL0"></div><div class="bg-layer" id="bgL1"></div><div class="bg-scrim" id="bgScrim"></div></div>
+
+<!-- ============ LOGIN ============ -->
+<section id="loginView" class="login-view">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="brand-mark">E</div>
+      <div>
+        <h1>Escarapelas SENA</h1>
+        <p>Centro de Automatización Industrial · Regional Caldas</p>
+      </div>
+    </div>
+    <form id="loginForm" autocomplete="on">
+      <label>Usuario
+        <input id="loginUser" type="text" autocomplete="username" required>
+      </label>
+      <label>Contraseña
+        <input id="loginPass" type="password" autocomplete="current-password" required>
+      </label>
+      <p id="loginError" class="form-error" role="alert"></p>
+      <button class="btn btn-primary btn-block" type="submit">Ingresar</button>
+    </form>
+    <p class="login-foot">Acceso restringido a personal autorizado.</p>
+    <p class="credit">Instructor: <strong>Jorge Walter Salazar A.</strong></p>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="appView" class="app-view" hidden>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-mark sm">E</div>
+      <div>
+        <strong>Escarapelas SENA</strong>
+        <span>Instructor: Jorge Walter Salazar A.</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span id="userBadge" class="user-chip"></span>
+      <button id="btnAttendance" class="btn btn-ghost">📋 Asistencia</button>
+      <button id="btnAppBg" class="btn btn-ghost" hidden>🖼 Fondo del panel</button>
+      <button id="btnUsers" class="btn btn-ghost" hidden>👥 Usuarios</button>
+      <button id="btnChangePass" class="btn btn-ghost">🔑 Contraseña</button>
+      <button id="btnLogout" class="btn btn-ghost">Salir</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <!-- ======= PANEL DE CONTROL ======= -->
+    <aside class="editor" id="editor">
+
+      <details class="card" open>
+        <summary><span class="step">1</span> Encabezado institucional y logo</summary>
+        <div class="card-body">
+          <div id="fields-inst"></div>
+          <div class="upload-row">
+            <div class="upload" data-img="logo">
+              <span class="upload-label">Logo del evento</span>
+              <div class="upload-thumb" id="thumb-logo"><span>Sin logo</span></div>
+              <div class="upload-actions">
+                <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-upload="logo" hidden></label>
+                <button class="btn btn-sm btn-ghost" data-clear="logo">Quitar</button>
+              </div>
+            </div>
+            <div class="stack">
+              <label class="lbl">Ubicación del logo</label>
+              <div class="segmented" id="logoPos">
+                <button data-v="left">◧ Izquierda</button>
+                <button data-v="center">◫ Centro</button>
+                <button data-v="right">◨ Derecha</button>
+              </div>
+              <label class="lbl">Tamaño del logo <output id="logoSizeOut"></output></label>
+              <input type="range" id="logoSize" min="10" max="40" step="1">
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary><span class="step">2</span> Título del evento</summary>
+        <div class="card-body"><div id="fields-event"></div></div>
+      </details>
+
+      <details class="card" open>
+        <summary><span class="step">3</span> Colores y estilo</summary>
+        <div class="card-body">
+          <div class="color-pick">
+            <label class="lbl" for="baseColor">Color base del evento</label>
+            <div class="color-row">
+              <input type="color" id="baseColor">
+              <input type="text" id="baseColorHex" maxlength="7" spellcheck="false" aria-label="Código hexadecimal">
+              <button class="btn btn-sm" id="btnRandomColor" title="Generar una combinación al azar">🎲 Sorpréndeme</button>
+            </div>
+            <div class="quick-colors" id="quickColors"></div>
+          </div>
+          <label class="lbl">Paleta sugerida (clic para aplicar)</label>
+          <div class="palettes" id="palettes"></div>
+          <label class="lbl">Ajuste fino de la paleta aplicada</label>
+          <div class="palette-edit" id="paletteEdit"></div>
+          <div class="grid-2">
+            <div>
+              <label class="lbl">Estilo</label>
+              <div class="segmented" id="theme">
+                <button data-v="oscuro">🌙 Oscuro</button>
+                <button data-v="claro">☀️ Claro</button>
+              </div>
+            </div>
+            <div>
+              <label class="lbl">Patrón decorativo</label>
+              <select id="pattern">
+                <option value="circuitos">Circuitos</option>
+                <option value="puntos">Puntos</option>
+                <option value="hexagonos">Hexágonos</option>
+                <option value="ondas">Ondas</option>
+                <option value="ninguno">Ninguno</option>
+              </select>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="slot"> Mostrar ranura para la cinta (porta-escarapela)</label>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary><span class="step">4</span> Imagen de fondo</summary>
+        <div class="card-body">
+          <div class="upload-row">
+            <div class="upload" data-img="bg">
+              <span class="upload-label">Fondo (va detrás de todo)</span>
+              <div class="upload-thumb wide" id="thumb-bg"><span>Sin fondo</span></div>
+              <div class="upload-actions">
+                <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-upload="bg" hidden></label>
+                <button class="btn btn-sm btn-ghost" data-clear="bg">Quitar</button>
+              </div>
+            </div>
+            <div class="stack">
+              <label class="lbl">Intensidad del color sobre el fondo <output id="overlayOut"></output></label>
+              <input type="range" id="overlay" min="0" max="100" step="5">
+              <p class="hint">Más intensidad = textos más legibles. Con 0 % la foto se ve tal cual.</p>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary><span class="step">5</span> Imágenes inferiores</summary>
+        <div class="card-body">
+          <div class="foot-uploads">
+            <div class="upload" data-img="foot0">
+              <span class="upload-label">Izquierda</span>
+              <div class="upload-thumb" id="thumb-foot0"><span>Vacío</span></div>
+              <div class="upload-actions">
+                <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-upload="foot0" hidden></label>
+                <button class="btn btn-sm btn-ghost" data-clear="foot0">✕</button>
+              </div>
+            </div>
+            <div class="upload" data-img="foot1">
+              <span class="upload-label">Centro</span>
+              <div class="upload-thumb" id="thumb-foot1"><span>Vacío</span></div>
+              <div class="upload-actions">
+                <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-upload="foot1" hidden></label>
+                <button class="btn btn-sm btn-ghost" data-clear="foot1">✕</button>
+              </div>
+            </div>
+            <div class="upload" data-img="foot2">
+              <span class="upload-label">Derecha</span>
+              <div class="upload-thumb" id="thumb-foot2"><span>Vacío</span></div>
+              <div class="upload-actions">
+                <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-upload="foot2" hidden></label>
+                <button class="btn btn-sm btn-ghost" data-clear="foot2">✕</button>
+              </div>
+            </div>
+          </div>
+          <label class="lbl">Altura de la franja inferior <output id="footSizeOut"></output></label>
+          <input type="range" id="footSize" min="8" max="30" step="1">
+        </div>
+      </details>
+
+      <details class="card" open>
+        <summary><span class="step">6</span> Participantes</summary>
+        <div class="card-body">
+          <div id="fields-people"></div>
+          <datalist id="rolesList">
+            <option value="Aprendiz"></option>
+            <option value="Participante"></option>
+            <option value="Instructor"></option>
+            <option value="Coordinador"></option>
+          </datalist>
+
+          <div class="count-row">
+            <label class="lbl" for="count">Cantidad de escarapelas</label>
+            <div class="count-ctrl">
+              <button class="btn btn-sm" id="countMinus" aria-label="Menos">−</button>
+              <input type="number" id="count" min="1" max="500">
+              <button class="btn btn-sm" id="countPlus" aria-label="Más">+</button>
+            </div>
+            <span class="hint" id="sheetsInfo"></span>
+          </div>
+
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="tab-one">Uno a uno</button>
+            <button class="tab" data-tab="tab-bulk">Separados por coma</button>
+            <button class="tab" data-tab="tab-excel">Desde Excel</button>
+          </div>
+
+          <div class="tab-panel" id="tab-one">
+            <div class="people-tools">
+              <button class="btn btn-sm btn-ghost" id="btnProperCase" title="Convierte 'ANA PÉREZ' en 'Ana Pérez'">Aa Nombre propio</button>
+              <button class="btn btn-sm btn-ghost" id="btnClearPeople">Vaciar nombres</button>
+            </div>
+            <div class="people-list" id="peopleList"></div>
+          </div>
+
+          <div class="tab-panel" id="tab-bulk" hidden>
+            <textarea id="bulkNames" rows="5" placeholder="Ana María Pérez Gómez, Juan Camilo Ríos, Laura Sofía Cardona, ..."></textarea>
+            <p class="hint">Separa los nombres con comas (también se aceptan saltos de línea). Cada nombre genera una escarapela.</p>
+            <button class="btn btn-primary btn-sm" id="btnBulk">Cargar nombres</button>
+          </div>
+
+          <div class="tab-panel" id="tab-excel" hidden>
+            <div class="dropzone" id="excelDrop">
+              <p><strong>Arrastra aquí tu archivo</strong> o</p>
+              <label class="btn btn-sm btn-primary">Seleccionar Excel / CSV<input type="file" id="excelFile" accept=".xlsx,.xls,.csv,.ods" hidden></label>
+              <p class="hint">Formatos: .xlsx, .xls, .ods, .csv. Se detectan columnas como <em>Nombres</em>, <em>Apellidos</em>, <em>Nombre completo</em> y <em>Rol / Cargo</em>.</p>
+            </div>
+            <div id="excelMap" hidden>
+              <div class="grid-2">
+                <label class="lbl">Hoja<select id="xlSheet"></select></label>
+                <label class="lbl">Fila de encabezados<select id="xlHeader"><option value="1">Sí, la primera fila son títulos</option><option value="0">No, todo son datos</option></select></label>
+                <label class="lbl">Columna de nombres<select id="xlName"></select></label>
+                <label class="lbl">Columna de apellidos (opcional)<select id="xlLast"></select></label>
+                <label class="lbl">Segunda columna de apellidos (opcional)<select id="xlLast2"></select></label>
+                <label class="lbl">Columna de rol (opcional)<select id="xlRole"></select></label>
+              </div>
+              <div class="xl-preview" id="xlPreview"></div>
+              <div class="row-end">
+                <button class="btn btn-sm btn-ghost" id="xlCancel">Cancelar</button>
+                <button class="btn btn-sm btn-primary" id="xlImport">Importar participantes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary><span class="step">7</span> Tamaño de la escarapela</summary>
+        <div class="card-body">
+          <div class="grid-2">
+            <label class="lbl">Ancho (mm)<input type="number" id="sizeW" min="50" max="101" step="0.5"></label>
+            <label class="lbl">Alto (mm)<input type="number" id="sizeH" min="70" max="133" step="0.5"></label>
+          </div>
+          <p class="hint" id="sizeInfo"></p>
+          <p class="hint warn" id="sizeLockNote"></p>
+          <button class="btn btn-sm" id="btnApplySize">Aplicar tamaño</button>
+        </div>
+      </details>
+
+      <details class="card">
+        <summary><span class="step">8</span> Plantillas del evento</summary>
+        <div class="card-body">
+          <p class="hint">Guarda el diseño completo (textos, colores, logos y fondo) en un archivo para reutilizarlo o pasarlo a otro computador.</p>
+          <div class="btn-row">
+            <button class="btn btn-sm" id="btnExport">⬇ Exportar plantilla</button>
+            <label class="btn btn-sm">⬆ Importar plantilla<input type="file" id="importFile" accept=".json,application/json" hidden></label>
+            <button class="btn btn-sm btn-ghost danger" id="btnReset">Reiniciar diseño</button>
+          </div>
+          <label class="check"><input type="checkbox" id="exportPeople" checked> Incluir lista de participantes al exportar</label>
+        </div>
+      </details>
+      <details class="card">
+        <summary><span class="step">9</span> Carnet de asistencia con QR</summary>
+        <div class="card-body">
+          <p class="hint">Cada participante recibe un carnet (85,6 × 54 mm, tamaño tarjeta) con los datos del evento y un código QR personal. Al escanearlo con el celular se registra su asistencia con fecha y hora.</p>
+          <div id="fields-card"></div>
+          <div class="event-code">
+            <div>
+              <span class="lbl">Código del evento</span>
+              <code id="eventCode">—</code>
+            </div>
+            <button class="btn btn-sm btn-ghost" id="btnNewEvent" title="Crea un evento nuevo: los carnets anteriores dejan de corresponder a este">↻ Nuevo código</button>
+          </div>
+          <p class="hint" id="serviceState"></p>
+          <button class="btn btn-sm btn-primary" id="btnOpenAtt">📋 Abrir control de asistencia</button>
+        </div>
+      </details>
+
+      <p class="app-credit">Escarapelas SENA · Centro de Automatización Industrial · Instructor: <strong>Jorge Walter Salazar A.</strong></p>
+    </aside>
+
+    <!-- ======= VISTA PREVIA ======= -->
+    <section class="preview-pane">
+      <div class="preview-head">
+        <div class="segmented" id="previewView">
+          <button data-v="badge" class="active">Escarapela</button>
+          <button data-v="card">Carnet</button>
+        </div>
+        <div class="preview-nav">
+          <button class="btn btn-sm" id="prevBadge" aria-label="Anterior">‹</button>
+          <span id="badgeIndex">1 / 1</span>
+          <button class="btn btn-sm" id="nextBadge" aria-label="Siguiente">›</button>
+        </div>
+      </div>
+      <div class="preview-stage" id="previewStage">
+        <div class="preview-scaler" id="previewScaler"></div>
+      </div>
+      <p class="preview-meta" id="previewMeta"></p>
+      <div class="preview-actions">
+        <button class="btn btn-primary" id="btnPrint">🖨 Vista previa de impresión</button>
+        <div class="btn-row">
+          <button class="btn" id="btnPng">⬇ PNG (esta)</button>
+          <button class="btn" id="btnZip">⬇ Todas (ZIP)</button>
+        </div>
+      </div>
+      <p class="hint center">Los textos en gris son sugerencias: no se imprimen hasta que los escribas.</p>
+    </section>
+  </main>
+</div>
+
+<!-- ============ MODAL: IMPRESIÓN ============ -->
+<div class="modal" id="printModal" hidden>
+  <div class="modal-box xl">
+    <header class="modal-head">
+      <h3>Vista previa de impresión</h3>
+      <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
+    </header>
+    <div class="print-toolbar">
+      <label class="lbl inline">Imprimir
+        <select id="printMode">
+          <option value="badges">Solo escarapelas (4 por hoja)</option>
+          <option value="cards">Solo carnets</option>
+          <option value="both">Escarapela + carnet de cada persona</option>
+        </select>
+      </label>
+      <label class="lbl inline">Papel
+        <select id="paper">
+          <option value="carta">Carta (21,59 × 27,94 cm)</option>
+          <option value="legal">Legal / Oficio US (21,59 × 35,56 cm)</option>
+          <option value="oficio">Oficio Colombia (21,6 × 33 cm)</option>
+        </select>
+      </label>
+      <label class="check inline"><input type="checkbox" id="cutGuides" checked> Guías de corte</label>
+      <label class="check inline"><input type="checkbox" id="printEmpty"> Incluir escarapelas sin nombre</label>
+      <span class="print-summary" id="printSummary"></span>
+    </div>
+    <div class="print-preview" id="printPreview"></div>
+    <footer class="modal-foot">
+      <p class="hint">En el cuadro de impresión elige: <strong>Escala 100 % / Tamaño real</strong>, <strong>Márgenes: Ninguno</strong>, activa <strong>Gráficos de fondo</strong> y desactiva encabezados y pies de página.</p>
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-close>Cerrar</button>
+        <button class="btn btn-primary" id="btnDoPrint">🖨 Imprimir</button>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ MODAL: USUARIOS ============ -->
+<div class="modal" id="usersModal" hidden>
+  <div class="modal-box">
+    <header class="modal-head">
+      <h3>Gestión de usuarios</h3>
+      <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
+    </header>
+    <div class="modal-body">
+      <form id="newUserForm" class="new-user">
+        <input id="nuName" placeholder="Usuario" required autocomplete="off">
+        <input id="nuPass" type="password" placeholder="Contraseña (mín. 6)" required autocomplete="new-password">
+        <select id="nuRole"><option value="user">Usuario normal</option><option value="admin">Administrador</option></select>
+        <button class="btn btn-primary btn-sm" type="submit">Crear</button>
+      </form>
+      <p class="form-error" id="nuError"></p>
+      <table class="users-table">
+        <thead><tr><th>Usuario</th><th>Rol</th><th>Creado</th><th></th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+      <p class="hint">Los usuarios se guardan en este navegador. Usa “Exportar usuarios” para llevarlos a otro equipo.</p>
+      <div class="btn-row">
+        <button class="btn btn-sm" id="btnExportUsers">⬇ Exportar usuarios</button>
+        <label class="btn btn-sm">⬆ Importar usuarios<input type="file" id="importUsers" accept=".json" hidden></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: CONTRASEÑA ============ -->
+<div class="modal" id="passModal" hidden>
+  <div class="modal-box sm">
+    <header class="modal-head">
+      <h3 id="passTitle">Cambiar contraseña</h3>
+      <button class="icon-btn" data-close id="passClose" aria-label="Cerrar">✕</button>
+    </header>
+    <form class="modal-body" id="passForm">
+      <p class="hint" id="passMsg"></p>
+      <label class="lbl">Contraseña actual<input type="password" id="pwOld" required autocomplete="current-password"></label>
+      <label class="lbl">Nueva contraseña<input type="password" id="pwNew" required minlength="6" autocomplete="new-password"></label>
+      <label class="lbl">Confirmar nueva contraseña<input type="password" id="pwNew2" required minlength="6" autocomplete="new-password"></label>
+      <p class="form-error" id="pwError"></p>
+      <button class="btn btn-primary btn-block" type="submit">Guardar</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL: FONDO DEL PANEL ============ -->
+<div class="modal" id="appBgModal" hidden>
+  <div class="modal-box sm">
+    <header class="modal-head">
+      <h3>Fondo del panel</h3>
+      <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
+    </header>
+    <div class="modal-body">
+      <p class="hint">Carga una o dos imágenes. Con dos, se alternan cada 8 segundos con una transición suave. Se ven en el inicio de sesión y detrás del panel.</p>
+      <div class="foot-uploads two">
+        <div class="upload">
+          <span class="upload-label">Imagen 1</span>
+          <div class="upload-thumb" id="thumb-appbg0"><span>Vacío</span></div>
+          <div class="upload-actions">
+            <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-appbg="0" hidden></label>
+            <button class="btn btn-sm btn-ghost" data-appbg-clear="0">Quitar</button>
+          </div>
+        </div>
+        <div class="upload">
+          <span class="upload-label">Imagen 2 (opcional)</span>
+          <div class="upload-thumb" id="thumb-appbg1"><span>Vacío</span></div>
+          <div class="upload-actions">
+            <label class="btn btn-sm">Cargar<input type="file" accept="image/*" data-appbg="1" hidden></label>
+            <button class="btn btn-sm btn-ghost" data-appbg-clear="1">Quitar</button>
+          </div>
+        </div>
+      </div>
+      <label class="lbl">Velo para mejorar la lectura <output id="appBgDimOut"></output></label>
+      <input type="range" id="appBgDim" min="0" max="80" step="5">
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: CONTROL DE ASISTENCIA ============ -->
+<div class="modal" id="attModal" hidden>
+  <div class="modal-box xl">
+    <header class="modal-head">
+      <div>
+        <h3>Control de asistencia</h3>
+        <p class="hint" id="attEvent" style="margin:2px 0 0"></p>
+      </div>
+      <button class="icon-btn" data-close aria-label="Cerrar">✕</button>
+    </header>
+    <div class="att-toolbar">
+      <span class="scan-pill" id="scanPill">—</span>
+      <button class="btn" id="btnScanToggle" disabled>Habilitar escaneo</button>
+      <button class="btn" id="btnSync" title="Envía la lista de participantes al servicio para que sus QR sean válidos">⇅ Sincronizar participantes</button>
+      <button class="btn" id="btnAttRefresh">↻ Actualizar</button>
+      <label class="check inline"><input type="checkbox" id="attAuto" checked> Actualizar cada 20 s</label>
+      <span class="spacer"></span>
+      <button class="btn btn-primary" id="btnAttExcel">⬇ Exportar a Excel</button>
+      <button class="btn btn-ghost" id="btnAttCfg">⚙ Configuración</button>
+    </div>
+    <div class="att-cfg" id="attCfg" hidden>
+      <div class="grid-2">
+        <label class="lbl">URL de la aplicación web (Apps Script)
+          <input type="text" id="attUrl" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false" autocomplete="off">
+        </label>
+        <label class="lbl">Clave de administrador (CLAVE_ADMIN)
+          <input type="password" id="attKey" placeholder="Mínimo 12 caracteres" autocomplete="off">
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" id="attKeyShow"> Mostrar clave</label>
+      <p class="hint warn" id="attCfgNote"></p>
+      <div class="row-end"><button class="btn btn-primary btn-sm" id="btnAttSave">Guardar y probar conexión</button></div>
+    </div>
+    <div class="modal-body att-body">
+      <div class="att-stats" id="attStats"></div>
+      <div class="att-filters">
+        <input type="text" id="attSearch" placeholder="Buscar por nombre o ID…">
+        <select id="attPerson"><option value="">Todos los participantes</option></select>
+        <select id="attDate"><option value="">Todos los días</option></select>
+        <select id="attRole"><option value="">Todos los rangos</option></select>
+      </div>
+      <div class="tabs" id="attTabs">
+        <button class="tab active" data-v="resumen">Resumen por participante y día</button>
+        <button class="tab" data-v="detalle">Registros detallados</button>
+      </div>
+      <div class="att-table-wrap" id="attTable"></div>
+    </div>
+    <footer class="modal-foot"><p class="att-status" id="attStatus"></p></footer>
+  </div>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="printRoot"></div>
+<div id="offscreen" aria-hidden="true"></div>
+
+<script src="js/vendor/html2canvas.min.js" defer></script>
+<script src="js/vendor/jszip.min.js" defer></script>
+<script src="js/vendor/xlsx.full.min.js" defer></script>
+<script src="js/sha256.js" defer></script>
+<script src="js/auth.js" defer></script>
+<script src="js/vendor/qrcode.js" defer></script>
+<script src="js/badge.js" defer></script>
+<script src="js/carnet.js" defer></script>
+<script src="js/attendance.js" defer></script>
+<script src="js/app.js" defer></script>
+</body>
+</html>
