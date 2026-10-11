@@ -1,28 +1,6 @@
 /**
  * ============================================================
  *  SERVIDOR — Escarapelas y Asistencia SENA · Versión 4
- *  Centro de Automatización Industrial · Regional Caldas
- *  Instructor: Jorge Walter Salazar A.
- * ============================================================
- *  Backend gratuito con Google Apps Script + Google Sheets + Google Drive.
- *
- *  Qué guarda (todo compartido entre usuarios y computadores):
- *   - Usuarios y roles (administrador / usuario) con contraseñas cifradas.
- *   - Proyectos: diseño completo de escarapelas y carnets + participantes (archivo JSON en Drive).
- *   - Participantes y asistencia por proyecto (pestañas de la hoja de cálculo).
- *   - Ajustes de la aplicación (fondo del panel).
- *
- *  Permisos:
- *   - Cualquier usuario: entrar, ver/cargar/guardar proyectos, abrir/cerrar el escaneo, ver asistencia.
- *   - Solo administradores: usuarios, eliminar proyectos, borrar todo, backup y restauración, fondo del panel.
- *
- *  INSTALACIÓN / ACTUALIZACIÓN (detalle en README.md):
- *   1. Pega este código en tu proyecto de Apps Script y guarda.
- *   2. Ejecuta la función `instalar` (autoriza los permisos; v4 pide también Google Drive).
- *   3. Implementar → Administrar implementaciones → ✏ → Versión: Nueva versión → Implementar
- *      (o, si es la primera vez: Nueva implementación → Aplicación web · Ejecutar como: Yo ·
- *       Acceso: Cualquier usuario).
- *   4. Usuario inicial: Walter / 123456 (pide cambiarla al entrar).
  * ============================================================
  */
 
